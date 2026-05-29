@@ -1,0 +1,162 @@
+// ============================================================
+// api/playlist.ts
+// Mirrors TikTokApi/api/playlist.py
+// ============================================================
+
+import type { TikTokApi } from "../tiktok";
+import type { Video } from "./video";
+import type { User } from "./user";
+import { InvalidResponseException } from "../exceptions";
+
+export interface PlaylistOptions {
+  id?: string | null;
+  data?: Record<string, unknown> | null;
+}
+
+export class Playlist {
+  /** Static reference to the parent TikTokApi instance */
+  static parent: TikTokApi;
+
+  /** The ID of the playlist */
+  id?: string;
+  /** The name of the playlist */
+  name?: string;
+  /** The video count of the playlist */
+  videoCount?: number;
+  /** The creator of the playlist */
+  creator?: User;
+  /** The cover URL of the playlist */
+  coverUrl?: string;
+  /** The raw data associated with this playlist */
+  asDict?: Record<string, unknown>;
+
+  constructor({ id, data }: PlaylistOptions = {}) {
+    if (!id && !data?.["id"]) {
+      throw new TypeError("You must provide id parameter.");
+    }
+    this.id = id ?? undefined;
+
+    if (data) {
+      this.asDict = data;
+      this._extractFromData();
+    }
+  }
+
+  /**
+   * Returns information associated with this Playlist.
+   *
+   * @example
+   * ```ts
+   * const info = await api.playlist({ id: '7426714779919797038' }).info();
+   * ```
+   */
+  async info(kwargs: {
+    msToken?: string;
+    headers?: Record<string, string>;
+    sessionIndex?: number;
+  } = {}): Promise<Record<string, unknown>> {
+    const id = this.id;
+    if (!id) {
+      throw new TypeError(
+        "You must provide the playlist id when creating this class to use this method."
+      );
+    }
+
+    const urlParams: Record<string, unknown> = {
+      mixId: id,
+      msToken: kwargs.msToken,
+    };
+
+    const resp = await Playlist.parent.makeRequest({
+      url: "https://www.tiktok.com/api/mix/detail/",
+      params: urlParams,
+      headers: kwargs.headers,
+      sessionIndex: kwargs.sessionIndex,
+    });
+
+    if (resp == null) {
+      throw new InvalidResponseException(resp, "TikTok returned an invalid response.");
+    }
+
+    this.asDict = resp["mixInfo"] as Record<string, unknown>;
+    this._extractFromData();
+    return resp;
+  }
+
+  /**
+   * Returns videos in this playlist.
+   *
+   * @example
+   * ```ts
+   * for await (const video of api.playlist({ id: '7426714779919797038' }).videos()) {
+   *   console.log(video.id);
+   * }
+   * ```
+   */
+  async *videos(
+    count = 30,
+    cursor = 0,
+    kwargs: { headers?: Record<string, string>; sessionIndex?: number } = {}
+  ): AsyncGenerator<Video> {
+    if (!this.id) {
+      await this.info(kwargs);
+    }
+    let found = 0;
+
+    while (found < count) {
+      const params: Record<string, unknown> = {
+        mixId: this.id,
+        count: Math.min(count, 30),
+        cursor,
+      };
+
+      const resp = await Playlist.parent.makeRequest({
+        url: "https://www.tiktok.com/api/mix/item_list/",
+        params,
+        headers: kwargs.headers,
+        sessionIndex: kwargs.sessionIndex,
+      });
+
+      if (resp == null) {
+        throw new InvalidResponseException(resp, "TikTok returned an invalid response.");
+      }
+
+      const itemList = (resp["itemList"] as Record<string, unknown>[]) ?? [];
+      for (const item of itemList) {
+        yield Playlist.parent.video({ data: item });
+        found++;
+      }
+
+      if (!resp["hasMore"]) return;
+      cursor = resp["cursor"] as number;
+    }
+  }
+
+  private _extractFromData(): void {
+    let data = this.asDict ?? {};
+
+    if ("mixInfo" in data) {
+      data = data["mixInfo"] as Record<string, unknown>;
+    }
+
+    this.id = (data["id"] as string | undefined) ?? (data["mixId"] as string | undefined);
+    this.name = (data["name"] as string | undefined) ?? (data["mixName"] as string | undefined);
+    this.videoCount = data["videoCount"] as number | undefined;
+
+    const creatorData = data["creator"] as Record<string, unknown> | undefined;
+    if (creatorData) {
+      this.creator = Playlist.parent.user({ data: creatorData });
+    }
+    this.coverUrl = data["cover"] as string | undefined;
+
+    if (!this.id || !this.name) {
+      Playlist.parent.logger.error(
+        `Failed to create Playlist with data: ${JSON.stringify(data)}`
+      );
+    }
+  }
+
+  toString(): string {
+    return `TikTokApi.playlist(id='${this.id}')`;
+  }
+}
