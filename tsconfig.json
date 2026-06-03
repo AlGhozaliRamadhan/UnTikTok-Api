@@ -10,7 +10,10 @@
     "resolveJsonModule": true,
     "moduleResolution": "node",
     "ignoreDeprecations": "5.0",
-    "types": ["node"]
+    "types": ["node"],
+    "outDir": "dist",
+    "rootDir": ".",
+    "declaration": true
   },
   "include": ["src/**/*", "tests/**/*", "examples/**/*"],
   "exclude": ["node_modules", "dist"]

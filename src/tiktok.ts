@@ -480,7 +480,11 @@ export class TikTokApi {
       const b = randomInt(100, 201);
 
       await page.mouse.move(x, y);
-      await page.waitForLoadState("networkidle");
+      try {
+        await page.waitForLoadState("networkidle", { timeout: 15000 });
+      } catch (e) {
+        this.logger.debug(`networkidle timeout during session creation, continuing...`);
+      }
       await page.mouse.move(a, b);
 
       const session: TikTokPlaywrightSession = {
