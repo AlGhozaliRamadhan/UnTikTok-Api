@@ -15,7 +15,7 @@ export interface SoundOptions {
 
 export class Sound {
   /** Static reference to the parent TikTokApi instance */
-  static parent: TikTokApi;
+  parent: TikTokApi;
 
   /** TikTok's ID for the sound */
   id?: string;
@@ -34,7 +34,8 @@ export class Sound {
   /** The raw data */
   asDict?: Record<string, unknown>;
 
-  constructor({ id, data }: SoundOptions = {}) {
+  constructor(parent: TikTokApi, { id, data }: SoundOptions = {}) {
+    this.parent = parent;
     if (data) {
       this.asDict = data;
       this._extractFromData();
@@ -70,7 +71,7 @@ export class Sound {
       musicId: id,
     };
 
-    const resp = await Sound.parent.makeRequest({
+    const resp = await this.parent.makeRequest({
       url: "https://www.tiktok.com/api/music/detail/",
       params: urlParams,
       headers: kwargs.headers,
@@ -116,7 +117,7 @@ export class Sound {
         cursor,
       };
 
-      const resp = await Sound.parent.makeRequest({
+      const resp = await this.parent.makeRequest({
         url: "https://www.tiktok.com/api/music/item_list/",
         params,
         headers: kwargs.headers,
@@ -129,7 +130,7 @@ export class Sound {
 
       const itemList = (resp["itemList"] as Record<string, unknown>[]) ?? [];
       for (const item of itemList) {
-        yield Sound.parent.video({ data: item });
+        yield this.parent.video({ data: item });
         found++;
       }
 
@@ -146,9 +147,9 @@ export class Sound {
       const musicInfo = data["musicInfo"] as Record<string, unknown>;
       const author = musicInfo["author"];
       if (typeof author === "object" && author !== null) {
-        this.author = Sound.parent.user({ data: author as Record<string, unknown> });
+        this.author = this.parent.user({ data: author as Record<string, unknown> });
       } else if (typeof author === "string") {
-        this.author = Sound.parent.user({ username: author });
+        this.author = this.parent.user({ username: author });
       }
       const music = musicInfo["music"] as Record<string, unknown> | undefined;
       if (music) {
@@ -172,7 +173,7 @@ export class Sound {
     }
 
     if (!this.id) {
-      Sound.parent.logger.error(`Failed to create Sound with data: ${JSON.stringify(data)}`);
+      this.parent.logger.error(`Failed to create Sound with data: ${JSON.stringify(data)}`);
     }
   }
 

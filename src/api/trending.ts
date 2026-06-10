@@ -9,7 +9,12 @@ import { InvalidResponseException } from "../exceptions";
 
 export class Trending {
   /** Static reference to the parent TikTokApi instance */
-  static parent: TikTokApi;
+  parent: TikTokApi;
+
+  constructor(parent: TikTokApi) {
+    this.parent = parent;
+  }
+
 
   /**
    * Returns Videos that are trending on TikTok.
@@ -21,7 +26,7 @@ export class Trending {
    * }
    * ```
    */
-  static async *videos(
+  async *videos(
     count = 30,
     kwargs: { headers?: Record<string, string>; sessionIndex?: number } = {}
   ): AsyncGenerator<Video> {
@@ -33,7 +38,7 @@ export class Trending {
         count,
       };
 
-      const resp = await Trending.parent.makeRequest({
+      const resp = await this.parent.makeRequest({
         url: "https://www.tiktok.com/api/recommend/item_list/",
         params,
         headers: kwargs.headers,
@@ -46,7 +51,7 @@ export class Trending {
 
       const itemList = (resp["itemList"] as Record<string, unknown>[]) ?? [];
       for (const item of itemList) {
-        yield Trending.parent.video({ data: item });
+        yield this.parent.video({ data: item });
         found++;
       }
 

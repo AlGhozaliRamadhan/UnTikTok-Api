@@ -21,7 +21,7 @@ export interface VideoOptions {
 
 export class Video {
   /** Static reference to the parent TikTokApi instance */
-  static parent: TikTokApi;
+  parent: TikTokApi;
 
   /** TikTok's ID of the Video */
   id?: string;
@@ -40,7 +40,8 @@ export class Video {
   /** The raw data associated with this Video */
   asDict?: Record<string, unknown>;
 
-  constructor({ id, url, data, sessionIndex, proxy }: VideoOptions = {}) {
+  constructor(parent: TikTokApi, { id, url, data, sessionIndex, proxy }: VideoOptions = {}) {
+    this.parent = parent;
     this.id = id ?? undefined;
     this.url = url ?? undefined;
 
@@ -50,7 +51,7 @@ export class Video {
     } else if (url) {
       // Python calls extract_video_id_from_url synchronously in __init__ using _get_session.
       // In TypeScript the session is synchronous too — we replicate that via the sync _getSession.
-      const [, session] = Video.parent._getSession({ sessionIndex });
+      const [, session] = this.parent._getSession({ sessionIndex });
       const proxyVal = proxy ?? (session.proxy as string | undefined);
 
       // Resolve synchronously: run a sync HEAD follow-redirect.
@@ -73,10 +74,11 @@ export class Video {
    * Use this instead of `new Video({ url })` when you have a short/redirect URL.
    */
   static async fromUrl(
+    parent: TikTokApi,
     url: string,
     kwargs: { sessionIndex?: number; proxy?: string } = {}
   ): Promise<Video> {
-    const [, session] = Video.parent._getSession(kwargs);
+    const [, session] = parent._getSession(kwargs);
     const proxyVal = kwargs.proxy ?? (session.proxy as string | undefined);
 
     const response = await axios.head(url, {
@@ -88,7 +90,7 @@ export class Video {
 
     if (finalUrl.includes("@") && finalUrl.includes("/video/")) {
       const videoId = finalUrl.split("/video/")[1].split("?")[0];
-      return new Video({ id: videoId, url });
+      return new Video(parent, { id: videoId, url });
     }
     throw new TypeError(
       "URL format not supported. Example:\nhttps://www.tiktok.com/@therock/video/6829267836783971589"
@@ -111,7 +113,7 @@ export class Video {
     sessionIndex?: number;
     proxy?: string;
   } = {}): Promise<Record<string, unknown>> {
-    const [, session] = Video.parent._getSession(kwargs);
+    const [, session] = this.parent._getSession(kwargs);
     const proxy = kwargs.proxy ?? (session.proxy as string | undefined);
 
     if (!this.url) {
@@ -180,7 +182,7 @@ export class Video {
     const setCookieHeader = response.headers["set-cookie"];
     if (setCookieHeader) {
       const cookies = _parseCookieHeaders(setCookieHeader, this.url);
-      await Video.parent.setSessionCookies(session, cookies);
+      await this.parent.setSessionCookies(session, cookies);
     }
 
     return videoInfo;
@@ -203,7 +205,7 @@ export class Video {
    */
   async bytes(options: { stream?: boolean } & Record<string, unknown> = {}): Promise<Buffer | AsyncGenerator<Buffer>> {
     // Python: i, session = self.parent._get_session(**kwargs)
-    const [, session] = Video.parent._getSession(options as { sessionIndex?: number });
+    const [, session] = this.parent._getSession(options as { sessionIndex?: number });
     const videoData = (this.asDict?.["video"] ?? {}) as Record<string, string>;
     const downloadAddr = videoData["downloadAddr"] || videoData["playAddr"];
 
@@ -212,7 +214,7 @@ export class Video {
     }
 
     // Python sets cookies as a dict directly from get_session_cookies
-    const cookies = await Video.parent.getSessionCookies(session);
+    const cookies = await this.parent.getSessionCookies(session);
     const cookieString = Object.entries(cookies)
       .map(([k, v]) => `${k}=${v}`)
       .join("; ");
@@ -273,7 +275,7 @@ export class Video {
         cursor,
       };
 
-      const resp = await Video.parent.makeRequest({
+      const resp = await this.parent.makeRequest({
         url: "https://www.tiktok.com/api/comment/list/",
         params,
         headers: kwargs.headers,
@@ -286,7 +288,7 @@ export class Video {
 
       const comments = (resp["comments"] as Record<string, unknown>[]) ?? [];
       for (const comment of comments) {
-        yield Video.parent.comment({ data: comment });
+        yield this.parent.comment({ data: comment });
         found++;
       }
 
@@ -319,7 +321,7 @@ export class Video {
         count: 16,
       };
 
-      const resp = await Video.parent.makeRequest({
+      const resp = await this.parent.makeRequest({
         url: "https://www.tiktok.com/api/related/item_list/",
         params,
         headers: kwargs.headers,
@@ -332,7 +334,7 @@ export class Video {
 
       const itemList = (resp["itemList"] as Record<string, unknown>[]) ?? [];
       for (const item of itemList) {
-        yield Video.parent.video({ data: item });
+        yield this.parent.video({ data: item });
         found++;
       }
       // Note: Python has no hasMore check here — it just loops once.
@@ -361,18 +363,18 @@ export class Video {
     // Python: author = data.get("author"); if isinstance(author, str): ...
     const author = data["author"];
     if (typeof author === "string") {
-      this.author = Video.parent.user({ username: author });
+      this.author = this.parent.user({ username: author });
     } else if (author) {
-      this.author = Video.parent.user({ data: author as Record<string, unknown> });
+      this.author = this.parent.user({ data: author as Record<string, unknown> });
     }
 
-    this.sound = Video.parent.sound({ data: data });
+    this.sound = this.parent.sound({ data: data });
 
     const challenges = (data["challenges"] as Record<string, unknown>[]) ?? [];
-    this.hashtags = challenges.map((h) => Video.parent.hashtag({ data: h }));
+    this.hashtags = challenges.map((h) => this.parent.hashtag({ data: h }));
 
     if (!this.id) {
-      Video.parent.logger.error(
+      this.parent.logger.error(
         `Failed to create Video with data: ${JSON.stringify(data)}`
       );
     }

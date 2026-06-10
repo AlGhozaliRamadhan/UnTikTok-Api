@@ -10,7 +10,12 @@ import { InvalidResponseException } from "../exceptions";
 
 export class Search {
   /** Static reference to the parent TikTokApi instance */
-  static parent: TikTokApi;
+  parent: TikTokApi;
+
+  constructor(parent: TikTokApi) {
+    this.parent = parent;
+  }
+
 
   /**
    * Searches for users.
@@ -24,13 +29,13 @@ export class Search {
    * }
    * ```
    */
-  static async *users(
+  async *users(
     searchTerm: string,
     count = 10,
     cursor = 0,
     kwargs: { headers?: Record<string, string>; sessionIndex?: number } = {}
   ): AsyncGenerator<User> {
-    for await (const user of Search.searchType(searchTerm, "user", count, cursor, kwargs)) {
+    for await (const user of this.searchType(searchTerm, "user", count, cursor, kwargs)) {
       yield user as User;
     }
   }
@@ -45,7 +50,7 @@ export class Search {
    * }
    * ```
    */
-  static async *searchType(
+  async *searchType(
     searchTerm: string,
     objType: "user" | "item",
     count = 10,
@@ -77,7 +82,7 @@ export class Search {
         params["search_id"] = searchId;
       }
 
-      const resp = await Search.parent.makeRequest({
+      const resp = await this.parent.makeRequest({
         url: `https://www.tiktok.com/api/search/${objType}/full/`,
         params,
         headers: kwargs.headers,
@@ -92,7 +97,7 @@ export class Search {
         const userList = (resp["user_list"] as Record<string, unknown>[]) ?? [];
         for (const user of userList) {
           const userInfo = user["user_info"] as Record<string, string>;
-          yield Search.parent.user({
+          yield this.parent.user({
             secUid: userInfo["sec_uid"],
             userId: userInfo["user_id"],
             username: userInfo["unique_id"],
@@ -102,7 +107,7 @@ export class Search {
       } else if (objType === "item") {
         const itemList = (resp["item_list"] as Record<string, unknown>[]) ?? [];
         for (const item of itemList) {
-          yield Search.parent.video({ data: item });
+          yield this.parent.video({ data: item });
           found++;
         }
       }

@@ -15,7 +15,7 @@ export interface HashtagOptions {
 
 export class Hashtag {
   /** Static reference to the parent TikTokApi instance */
-  static parent: TikTokApi;
+  parent: TikTokApi;
 
   /** The ID of the hashtag */
   id?: string;
@@ -28,7 +28,8 @@ export class Hashtag {
   /** Stats if available */
   stats?: Record<string, unknown>;
 
-  constructor({ name, id, data }: HashtagOptions = {}) {
+  constructor(parent: TikTokApi, { name, id, data }: HashtagOptions = {}) {
+    this.parent = parent;
     if (name != null) this.name = name;
     if (id != null) this.id = id;
 
@@ -63,7 +64,7 @@ export class Hashtag {
       msToken: kwargs.msToken,
     };
 
-    const resp = await Hashtag.parent.makeRequest({
+    const resp = await this.parent.makeRequest({
       url: "https://www.tiktok.com/api/challenge/detail/",
       params: urlParams,
       headers: kwargs.headers,
@@ -106,7 +107,7 @@ export class Hashtag {
         cursor,
       };
 
-      const resp = await Hashtag.parent.makeRequest({
+      const resp = await this.parent.makeRequest({
         url: "https://www.tiktok.com/api/challenge/item_list/",
         params,
         headers: kwargs.headers,
@@ -119,7 +120,7 @@ export class Hashtag {
 
       const itemList = (resp["itemList"] as Record<string, unknown>[]) ?? [];
       for (const item of itemList) {
-        yield Hashtag.parent.video({ data: item });
+        yield this.parent.video({ data: item });
         found++;
       }
 
@@ -151,7 +152,7 @@ export class Hashtag {
     }
 
     if (!this.id || !this.name) {
-      Hashtag.parent.logger.error(
+      this.parent.logger.error(
         `Failed to create Hashtag with data: ${JSON.stringify(data)}`
       );
     }

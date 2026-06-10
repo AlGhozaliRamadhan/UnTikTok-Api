@@ -9,7 +9,7 @@ import { InvalidResponseException } from "../exceptions";
 
 export class Comment {
   /** Static reference to the parent TikTokApi instance */
-  static parent: TikTokApi;
+  parent: TikTokApi;
 
   /** The id of the comment */
   id!: string;
@@ -22,7 +22,8 @@ export class Comment {
   /** The raw data associated with this comment */
   asDict: Record<string, unknown>;
 
-  constructor(data?: Record<string, unknown>) {
+  constructor(parent: TikTokApi, data?: Record<string, unknown>) {
+    this.parent = parent;
     this.asDict = data ?? {};
     if (data) {
       this._extractFromData();
@@ -35,7 +36,7 @@ export class Comment {
     this.text = data["text"] as string;
 
     const usr = data["user"] as Record<string, string>;
-    this.author = Comment.parent.user({
+    this.author = this.parent.user({
       userId: usr["uid"],
       username: usr["unique_id"],
       secUid: usr["sec_uid"],
@@ -68,7 +69,7 @@ export class Comment {
         comment_id: this.id,
       };
 
-      const resp = await Comment.parent.makeRequest({
+      const resp = await this.parent.makeRequest({
         url: "https://www.tiktok.com/api/comment/list/reply/",
         params,
         headers: kwargs.headers,
@@ -81,7 +82,7 @@ export class Comment {
 
       const comments = (resp["comments"] as Record<string, unknown>[]) ?? [];
       for (const comment of comments) {
-        yield Comment.parent.comment({ data: comment });
+        yield this.parent.comment({ data: comment });
         found++;
       }
 

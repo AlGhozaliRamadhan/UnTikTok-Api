@@ -15,7 +15,7 @@ export interface PlaylistOptions {
 
 export class Playlist {
   /** Static reference to the parent TikTokApi instance */
-  static parent: TikTokApi;
+  parent: TikTokApi;
 
   /** The ID of the playlist */
   id?: string;
@@ -30,7 +30,8 @@ export class Playlist {
   /** The raw data associated with this playlist */
   asDict?: Record<string, unknown>;
 
-  constructor({ id, data }: PlaylistOptions = {}) {
+  constructor(parent: TikTokApi, { id, data }: PlaylistOptions = {}) {
+    this.parent = parent;
     if (!id && !data?.["id"]) {
       throw new TypeError("You must provide id parameter.");
     }
@@ -67,7 +68,7 @@ export class Playlist {
       msToken: kwargs.msToken,
     };
 
-    const resp = await Playlist.parent.makeRequest({
+    const resp = await this.parent.makeRequest({
       url: "https://www.tiktok.com/api/mix/detail/",
       params: urlParams,
       headers: kwargs.headers,
@@ -110,7 +111,7 @@ export class Playlist {
         cursor,
       };
 
-      const resp = await Playlist.parent.makeRequest({
+      const resp = await this.parent.makeRequest({
         url: "https://www.tiktok.com/api/mix/item_list/",
         params,
         headers: kwargs.headers,
@@ -123,7 +124,7 @@ export class Playlist {
 
       const itemList = (resp["itemList"] as Record<string, unknown>[]) ?? [];
       for (const item of itemList) {
-        yield Playlist.parent.video({ data: item });
+        yield this.parent.video({ data: item });
         found++;
       }
 
@@ -145,12 +146,12 @@ export class Playlist {
 
     const creatorData = data["creator"] as Record<string, unknown> | undefined;
     if (creatorData) {
-      this.creator = Playlist.parent.user({ data: creatorData });
+      this.creator = this.parent.user({ data: creatorData });
     }
     this.coverUrl = data["cover"] as string | undefined;
 
     if (!this.id || !this.name) {
-      Playlist.parent.logger.error(
+      this.parent.logger.error(
         `Failed to create Playlist with data: ${JSON.stringify(data)}`
       );
     }

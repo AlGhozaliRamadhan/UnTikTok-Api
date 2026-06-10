@@ -71,8 +71,8 @@ export interface MakeRequestOptions {
 // ---------------------------------------------------------------------------
 export class TikTokApi {
   // ── Static sub-module references (mirrors Python class-level attributes) ──
-  readonly trending = Trending;
-  readonly search = Search;
+  readonly trending: Trending;
+  readonly search: Search;
 
   // ── State ──
   sessions: TikTokPlaywrightSession[] = [];
@@ -91,41 +91,37 @@ export class TikTokApi {
     const { loggingLevel = "warn", loggerName } = options;
     this.logger = new Logger(loggerName ?? "TikTokApi", loggingLevel);
 
+    this.trending = new Trending(this);
+    this.search = new Search(this);
+
+
     // Wire static parent references
-    User.parent = this;
-    Video.parent = this;
-    Sound.parent = this;
-    Hashtag.parent = this;
-    Comment.parent = this;
-    Trending.parent = this;
-    Search.parent = this;
-    Playlist.parent = this;
   }
 
   // ── Factory methods (mirror Python's api.user(), api.video(), etc.) ──
 
   user(options: UserOptions): User {
-    return new User(options);
+    return new User(this, options);
   }
 
   video(options: VideoOptions): Video {
-    return new Video(options);
+    return new Video(this, options);
   }
 
   sound(options: SoundOptions): Sound {
-    return new Sound(options);
+    return new Sound(this, options);
   }
 
   hashtag(options: HashtagOptions): Hashtag {
-    return new Hashtag(options);
+    return new Hashtag(this, options);
   }
 
   comment(options: { data?: Record<string, unknown> }): Comment {
-    return new Comment(options.data);
+    return new Comment(this, options.data);
   }
 
   playlist(options: PlaylistOptions): Playlist {
-    return new Playlist(options);
+    return new Playlist(this, options);
   }
 
   // ── Session params ──

@@ -17,7 +17,7 @@ export interface UserOptions {
 
 export class User {
   /** Static reference to the parent TikTokApi instance */
-  static parent: TikTokApi;
+  parent: TikTokApi;
 
   /** The ID of the user */
   userId?: string;
@@ -28,7 +28,8 @@ export class User {
   /** The raw data associated with this user */
   asDict?: Record<string, unknown>;
 
-  constructor({ username, userId, secUid, data }: UserOptions = {}) {
+  constructor(parent: TikTokApi, { username, userId, secUid, data }: UserOptions = {}) {
+    this.parent = parent;
     this._updateIdSecUidUsername(userId, secUid, username);
     if (data) {
       this.asDict = data;
@@ -62,7 +63,7 @@ export class User {
       msToken: kwargs.msToken,
     };
 
-    const resp = await User.parent.makeRequest({
+    const resp = await this.parent.makeRequest({
       url: "https://www.tiktok.com/api/user/detail/",
       params: urlParams,
       headers: kwargs.headers,
@@ -105,7 +106,7 @@ export class User {
         cursor,
       };
 
-      const resp = await User.parent.makeRequest({
+      const resp = await this.parent.makeRequest({
         url: "https://www.tiktok.com/api/user/playlist",
         params,
         headers: kwargs.headers,
@@ -118,7 +119,7 @@ export class User {
 
       const playList = (resp["playList"] as Record<string, unknown>[]) ?? [];
       for (const pl of playList) {
-        yield User.parent.playlist({ data: pl });
+        yield this.parent.playlist({ data: pl });
         found++;
       }
 
@@ -154,7 +155,7 @@ export class User {
         cursor,
       };
 
-      const resp = await User.parent.makeRequest({
+      const resp = await this.parent.makeRequest({
         url: "https://www.tiktok.com/api/post/item_list/",
         params,
         headers: kwargs.headers,
@@ -167,7 +168,7 @@ export class User {
 
       const itemList = (resp["itemList"] as Record<string, unknown>[]) ?? [];
       for (const item of itemList) {
-        yield User.parent.video({ data: item });
+        yield this.parent.video({ data: item });
         found++;
       }
 
@@ -203,7 +204,7 @@ export class User {
         cursor,
       };
 
-      const resp = await User.parent.makeRequest({
+      const resp = await this.parent.makeRequest({
         url: "https://www.tiktok.com/api/favorite/item_list",
         params,
         headers: kwargs.headers,
@@ -216,7 +217,7 @@ export class User {
 
       const itemList = (resp["itemList"] as Record<string, unknown>[]) ?? [];
       for (const item of itemList) {
-        yield User.parent.video({ data: item });
+        yield this.parent.video({ data: item });
         found++;
       }
 
@@ -241,7 +242,7 @@ export class User {
     }
 
     if (!this.username || !this.userId || !this.secUid) {
-      User.parent.logger.error(
+      this.parent.logger.error(
         `Failed to create User with data: ${JSON.stringify(data)}`
       );
     }
