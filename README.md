@@ -26,13 +26,13 @@
 This API allows you to extract and automate interactions with TikTok data without requiring an official developer API key. It achieves this by using Playwright and stealth scripts to interface directly with TikTok's web endpoints.
 
 **Capabilities include:**
-- 📈 **Trending Feeds:** Fetch the most viral and trending videos on the platform.
-- 👤 **User Profiles:** Retrieve a user's uploaded videos, liked videos, and profile information.
-- 🏷️ **Hashtags:** Fetch videos under specific hashtags.
-- 🔍 **Search:** Search for specific users or videos by keyword.
-- 💬 **Comments:** Extract comments and replies from specific videos.
-- 🎵 **Sounds/Music:** Retrieve videos associated with a specific audio track or sound.
-- 📥 **Downloads:** Download raw video bytes (without watermarks) and audio streams directly.
+- **Trending Feeds:** Fetch the most viral and trending videos on the platform.
+- **User Profiles:** Retrieve a user's uploaded videos, liked videos, and profile information.
+- **Hashtags:** Fetch videos under specific hashtags.
+- **Search:** Search for specific users or videos by keyword.
+- **Comments:** Extract comments and replies from specific videos.
+- **Sounds/Music:** Retrieve videos associated with a specific audio track or sound.
+- **Downloads:** Download raw video bytes (without watermarks) and audio streams directly.
 
 ---
 
