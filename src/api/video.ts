@@ -65,7 +65,11 @@ export class Video {
     }
 
     if (!this.id && !this.url) {
-      throw new TypeError("You must provide id or url parameter.");
+      if (data) {
+        this.parent.logger.warn(`Video data provided is missing 'id': ${JSON.stringify(data)}`);
+      } else {
+        throw new TypeError("You must provide id or url parameter.");
+      }
     }
   }
 
@@ -120,20 +124,51 @@ export class Video {
       throw new TypeError("To call video.info() you need to set the video's url.");
     }
 
-    const response = await axios.get<string>(this.url, {
-      headers: session.headers ?? {},
-      responseType: "text",
-    });
+    let text: string;
+    let statusCode = 200;
+    let setCookieHeader: string | string[] | undefined = undefined;
 
-    if (response.status !== 200) {
-      throw new InvalidResponseException(
-        response.data,
-        "TikTok returned an invalid response.",
-        response.status
-      );
+    try {
+      await session.page.goto(this.url, { waitUntil: "domcontentloaded" });
+      let found = false;
+      const maxAttempts = 15;
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        const hasTag = await session.page.evaluate(() => {
+          const doc = (globalThis as any).document;
+          return !!(
+            doc?.getElementById("__UNIVERSAL_DATA_FOR_REHYDRATION__") ||
+            doc?.getElementById("SIGI_STATE")
+          );
+        });
+        if (hasTag) {
+          found = true;
+          break;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+      if (!found) {
+        throw new Error("Script tags (__UNIVERSAL_DATA_FOR_REHYDRATION__ or SIGI_STATE) not found in page DOM after timeout.");
+      }
+      text = await session.page.content();
+    } catch (fetchErr) {
+      this.parent.logger.warn(`Browser navigation failed for video.info(), falling back to axios: ${fetchErr}`);
+      const response = await axios.get<string>(this.url, {
+        headers: session.headers ?? {},
+        responseType: "text",
+      });
+
+      statusCode = response.status;
+      if (response.status !== 200) {
+        throw new InvalidResponseException(
+          response.data,
+          "TikTok returned an invalid response.",
+          response.status
+        );
+      }
+      text = response.data;
+      setCookieHeader = response.headers["set-cookie"];
     }
 
-    const text = response.data;
     let videoInfo: Record<string, unknown>;
 
     // Try SIGI_STATE first (same logic as Python)
@@ -143,7 +178,7 @@ export class Video {
       const contentStart = sigiStart + sigiTag.length;
       const contentEnd = text.indexOf("</script>", contentStart);
       if (contentEnd === -1) {
-        throw new InvalidResponseException(text, "TikTok returned an invalid response.", response.status);
+        throw new InvalidResponseException(text, "TikTok returned an invalid response.", statusCode);
       }
       const data = JSON.parse(text.slice(contentStart, contentEnd)) as Record<string, Record<string, unknown>>;
       videoInfo = data["ItemModule"][this.id!] as Record<string, unknown>;
@@ -152,12 +187,12 @@ export class Video {
       const rehydTag = '<script id="__UNIVERSAL_DATA_FOR_REHYDRATION__" type="application/json">';
       const rehydStart = text.indexOf(rehydTag);
       if (rehydStart === -1) {
-        throw new InvalidResponseException(text, "TikTok returned an invalid response.", response.status);
+        throw new InvalidResponseException(text, "TikTok returned an invalid response.", statusCode);
       }
       const contentStart = rehydStart + rehydTag.length;
       const contentEnd = text.indexOf("</script>", contentStart);
       if (contentEnd === -1) {
-        throw new InvalidResponseException(text, "TikTok returned an invalid response.", response.status);
+        throw new InvalidResponseException(text, "TikTok returned an invalid response.", statusCode);
       }
 
       const data = JSON.parse(text.slice(contentStart, contentEnd)) as Record<string, unknown>;
@@ -165,12 +200,12 @@ export class Video {
       const videoDetail = (defaultScope["webapp.video-detail"] ?? {}) as Record<string, unknown>;
 
       if ((videoDetail["statusCode"] ?? 0) !== 0) {
-        throw new InvalidResponseException(text, "TikTok returned an invalid response structure.", response.status);
+        throw new InvalidResponseException(text, "TikTok returned an invalid response structure.", statusCode);
       }
 
       videoInfo = ((videoDetail["itemInfo"] as Record<string, unknown>)?.["itemStruct"]) as Record<string, unknown>;
       if (!videoInfo) {
-        throw new InvalidResponseException(text, "TikTok returned an invalid response structure.", response.status);
+        throw new InvalidResponseException(text, "TikTok returned an invalid response structure.", statusCode);
       }
     }
 
@@ -179,7 +214,6 @@ export class Video {
 
     // Convert Set-Cookie headers to Playwright cookie format and store them
     // (mirrors Python's `requests_cookie_to_playwright_cookie`)
-    const setCookieHeader = response.headers["set-cookie"];
     if (setCookieHeader) {
       const cookies = _parseCookieHeaders(setCookieHeader, this.url);
       await this.parent.setSessionCookies(session, cookies);

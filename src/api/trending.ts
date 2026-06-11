@@ -33,9 +33,10 @@ export class Trending {
     let found = 0;
 
     while (found < count) {
+      const batchSize = Math.min(count - found, 30);
       const params: Record<string, unknown> = {
         from_page: "fyp",
-        count,
+        count: batchSize,
       };
 
       const resp = await this.parent.makeRequest({
@@ -50,6 +51,7 @@ export class Trending {
       }
 
       const itemList = (resp["itemList"] as Record<string, unknown>[]) ?? [];
+      if (itemList.length === 0) return; // If no items returned, stop to avoid infinite loop
       for (const item of itemList) {
         yield this.parent.video({ data: item });
         found++;

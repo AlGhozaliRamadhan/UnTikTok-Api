@@ -84,6 +84,7 @@ export class TikTokApi {
   private _cleanupCalled = false;
   private _autoCleanupDeadSessions = true;
   private _playwrightInstance: { stop: () => Promise<void> } | null = null;
+  private _userAgent: string | null = null;
 
   readonly logger: Logger;
 
@@ -342,6 +343,22 @@ export class TikTokApi {
       }
     }
 
+    // Detect dynamic User-Agent to avoid Chrome version mismatches in headless mode
+    let resolvedUA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
+    if (this.browser && browserName === "chromium") {
+      try {
+        const tempContext = await this.browser.newContext();
+        const tempPage = await tempContext.newPage();
+        const rawUA = await tempPage.evaluate("navigator.userAgent") as string;
+        resolvedUA = rawUA.replace("HeadlessChrome", "Chrome");
+        await tempPage.close();
+        await tempContext.close();
+      } catch (e) {
+        // Use hardcoded fallback
+      }
+    }
+    this._userAgent = resolvedUA;
+
     const createOne = () =>
       this._createSession({
         url: startingUrl,
@@ -416,8 +433,13 @@ export class TikTokApi {
         cookies["msToken"] = msToken;
       }
 
+      let defaultUA = this._userAgent;
+      if (!defaultUA) {
+        defaultUA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
+      }
       context = await this.browser!.newContext({
         proxy: proxyToPlaywright(proxy),
+        userAgent: defaultUA,
         ...contextOptions,
       });
 
