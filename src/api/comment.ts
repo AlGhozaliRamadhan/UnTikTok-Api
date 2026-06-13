@@ -45,6 +45,21 @@ export class Comment {
   }
 
   /**
+   * Returns whether this comment contains a TikTok sticker.
+   * Note: The sticker image URL is not retrievable via this endpoint.
+   */
+  get isSticker(): boolean {
+    return (this.text || "").includes("[Sticker]");
+  }
+
+  /**
+   * Returns the comment text with the "[Sticker]" placeholder stripped.
+   */
+  get stickerText(): string {
+    return (this.text || "").replace(/\[Sticker\]/g, "").trim();
+  }
+
+  /**
    * Returns reply comments for this comment.
    *
    * @example

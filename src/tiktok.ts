@@ -553,20 +553,7 @@ export class TikTokApi {
 
   // ── JS fetch / XBogus / Sign ──
 
-  generateJsFetch(method: string, url: string, headers: Record<string, string>): string {
-    const headersJs = JSON.stringify(headers);
-    return `
-      new Promise((resolve, reject) => {
-        fetch('${url}', { method: '${method}', headers: ${headersJs} })
-          .then(response => response.text())
-          .then(data => resolve(data))
-          .catch(error => reject(error.message));
-      })
-    `;
-  }
-
   async runFetchScript(url: string, headers: Record<string, string>, kwargs: { sessionIndex?: number } = {}): Promise<string> {
-    const jsScript = this.generateJsFetch("GET", url, headers);
     let session: TikTokPlaywrightSession;
 
     try {
@@ -576,7 +563,10 @@ export class TikTokApi {
     }
 
     try {
-      return (await session.page.evaluate(jsScript)) as string;
+      return (await session.page.evaluate(async ({ fetchUrl, fetchHeaders }) => {
+        const response = await fetch(fetchUrl, { method: 'GET', headers: fetchHeaders });
+        return await response.text();
+      }, { fetchUrl: url, fetchHeaders: headers })) as string;
     } catch (e) {
       this.logger.error(`Session failed during fetch: ${e}`);
       await this._markSessionInvalid(session);
@@ -643,6 +633,23 @@ export class TikTokApi {
     if (!xBogus) throw new Error("Failed to generate X-Bogus");
 
     return url + (url.includes("?") ? "&" : "?") + `X-Bogus=${xBogus}`;
+  }
+
+  // ── Session Storage ──
+  
+  /**
+   * Saves the current Playwright browser context state (cookies, local storage) to a file.
+   * You can load this state back by passing \`contextOptions: { storageState: "path.json" }\` to \`createSessions\`.
+   */
+  async saveSessionState(path: string, sessionIndex = 0): Promise<void> {
+    if (this.sessions.length <= sessionIndex) {
+      throw new Error(`Session index ${sessionIndex} does not exist`);
+    }
+    const session = this.sessions[sessionIndex];
+    if (session.context) {
+      await session.context.storageState({ path });
+      this.logger.info(`Session state saved to ${path}`);
+    }
   }
 
   // ── makeRequest ──

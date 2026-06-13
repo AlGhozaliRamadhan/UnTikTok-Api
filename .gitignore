@@ -129,3 +129,13 @@ dist
 *.njsproj
 *.sln
 *.sw?
+
+# Playwright & Testing
+playwright-report/
+test-results/
+
+# TikTok API Specifics
+*.mp4
+*.mp3
+state.json
+*state.json

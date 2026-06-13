@@ -42,6 +42,15 @@ async function testUser() {
       likedCount++;
     }
     console.log(`✅ test_user_liked passed: got ${likedCount} liked videos (may be 0 if private)`);
+
+    // Test user reposts
+    const userWithReposts = api.user({ username: "oja756" });
+    let repostsCount = 0;
+    for await (const video of userWithReposts.reposts(5)) {
+      assert.ok(video.id !== undefined, "Repost video id should be set");
+      repostsCount++;
+    }
+    console.log(`✅ test_user_reposts passed: got ${repostsCount} reposts`);
   } finally {
     await api.closeSessions();
   }

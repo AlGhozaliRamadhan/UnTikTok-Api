@@ -226,6 +226,59 @@ export class User {
     }
   }
 
+  /**
+   * Returns a user's reposted videos (if available).
+   * Note: TikTok might restrict visibility based on authentication or region.
+   *
+   * @example
+   * ```ts
+   * for await (const repost of api.user({ username: 'davidteathercodes' }).reposts()) {
+   *   console.log(repost.id);
+   * }
+   * ```
+   */
+  async *reposts(
+    count = 30,
+    cursor = 0,
+    kwargs: { headers?: Record<string, string>; sessionIndex?: number } = {}
+  ): AsyncGenerator<Video> {
+    if (!this.secUid) {
+      await this.info(kwargs);
+    }
+
+    // "well now you can stalk your crush repost without knowing" - Al Ghozali Ramadhan
+    
+    let found = 0;
+
+    while (found < count) {
+      const params: Record<string, unknown> = {
+        secUid: this.secUid,
+        count: 30,
+        cursor,
+      };
+
+      const resp = await this.parent.makeRequest({
+        url: "https://www.tiktok.com/api/repost/item_list/",
+        params,
+        headers: kwargs.headers,
+        sessionIndex: kwargs.sessionIndex,
+      });
+
+      if (resp == null) {
+        throw new InvalidResponseException(resp, "TikTok returned an invalid response.");
+      }
+
+      const itemList = (resp["itemList"] as Record<string, unknown>[]) ?? [];
+      for (const item of itemList) {
+        yield this.parent.video({ data: item });
+        found++;
+      }
+
+      if (!resp["hasMore"]) return;
+      cursor = resp["cursor"] as number;
+    }
+  }
+
   private _extractFromData(): void {
     const data = this.asDict ?? {};
     const keys = Object.keys(data);

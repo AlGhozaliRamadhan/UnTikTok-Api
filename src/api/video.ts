@@ -181,7 +181,14 @@ export class Video {
         throw new InvalidResponseException(text, "TikTok returned an invalid response.", statusCode);
       }
       const data = JSON.parse(text.slice(contentStart, contentEnd)) as Record<string, Record<string, unknown>>;
-      videoInfo = data["ItemModule"][this.id!] as Record<string, unknown>;
+      const itemModule = data["ItemModule"];
+      if (!itemModule) {
+        throw new InvalidResponseException(text, "TikTok returned an invalid response. 'ItemModule' not found in SIGI_STATE.", statusCode);
+      }
+      videoInfo = itemModule[this.id!] as Record<string, unknown>;
+      if (!videoInfo) {
+        throw new InvalidResponseException(text, `TikTok returned an invalid response. Video ID ${this.id} not found in ItemModule.`, statusCode);
+      }
     } else {
       // Try __UNIVERSAL_DATA_FOR_REHYDRATION__
       const rehydTag = '<script id="__UNIVERSAL_DATA_FOR_REHYDRATION__" type="application/json">';
