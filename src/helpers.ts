@@ -4,6 +4,7 @@
 // ============================================================
 
 import axios from "axios";
+import { randomInt } from "crypto";
 
 /**
  * Extract the video ID from a TikTok URL, following redirects.
@@ -42,7 +43,7 @@ export async function extractVideoIdFromUrl(
  */
 export function randomChoice<T>(choices: T[] | null | undefined): T | undefined {
   if (!choices || choices.length === 0) return undefined;
-  return choices[Math.floor(Math.random() * choices.length)];
+  return choices[randomInt(choices.length)];
 }
 
 /**
