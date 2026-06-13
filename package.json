@@ -1,6 +1,6 @@
 {
   "name": "untiktok-api",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Unofficial TikTok API wrapper in TypeScript (ported from Python)",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
