@@ -14,7 +14,7 @@ async function testPinned() {
     const rawData = firstVid.value.asDict ?? {};
     const strData = JSON.stringify(rawData).toLowerCase();
     if (strData.includes("pin")) {
-      const matchKeys = [];
+      const matchKeys: string[] = [];
       const traverse = (obj: any, path: string) => {
         for (const k in obj) {
           if (k.toLowerCase().includes("pin")) matchKeys.push(`${path}.${k}`);
