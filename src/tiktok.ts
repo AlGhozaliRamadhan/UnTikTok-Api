@@ -227,7 +227,7 @@ export class TikTokApi {
           }
         }
         if (validSessions.length > 0) {
-          return validSessions[Math.floor(Math.random() * validSessions.length)];
+          return validSessions[randomInt(0, validSessions.length)];
         }
       }
 
@@ -269,7 +269,7 @@ export class TikTokApi {
     if (this.sessions.length === 0) {
       throw new Error("No sessions created, please create sessions first");
     }
-    const i = kwargs.sessionIndex ?? Math.floor(Math.random() * this.sessions.length);
+    const i = kwargs.sessionIndex ?? randomInt(0, this.sessions.length);
     return [i, this.sessions[i]];
   }
 
@@ -613,7 +613,7 @@ export class TikTokApi {
           "https://www.tiktok.com",
           "https://www.tiktok.com/@tiktok",
         ];
-        await session.page.goto(tryUrls[Math.floor(Math.random() * tryUrls.length)]);
+        await session.page.goto(tryUrls[randomInt(0, tryUrls.length)]);
       }
     }
 
