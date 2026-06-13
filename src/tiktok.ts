@@ -603,9 +603,9 @@ export class TikTokApi {
         break;
       } catch (e) {
         if (attempt === maxAttempts - 1) {
+          // eslint-disable-next-line preserve-caught-error
           throw new Error(
-            `Failed to load tiktok after ${maxAttempts} attempts, consider using a proxy`,
-            { cause: e }
+            `Failed to load tiktok after ${maxAttempts} attempts, consider using a proxy`
           );
         }
         const tryUrls = [
