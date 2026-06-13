@@ -604,7 +604,8 @@ export class TikTokApi {
       } catch (e) {
         if (attempt === maxAttempts - 1) {
           throw new Error(
-            `Failed to load tiktok after ${maxAttempts} attempts, consider using a proxy`
+            `Failed to load tiktok after ${maxAttempts} attempts, consider using a proxy`,
+            { cause: e }
           );
         }
         const tryUrls = [
@@ -667,12 +668,12 @@ export class TikTokApi {
 
     // Python: if session.params is not None: params = {**session.params, **params}
     // Always merge — extraParams may be null/undefined
-    let params: Record<string, unknown> = {
+    const params: Record<string, unknown> = {
       ...(session.params ?? {}),
       ...(extraParams ?? {}),
     };
     // Python: if headers is not None: headers = {**session.headers, **headers} else: headers = session.headers
-    let headers: Record<string, string> = extraHeaders
+    const headers: Record<string, string> = extraHeaders
       ? { ...(session.headers ?? {}), ...extraHeaders }
       : { ...(session.headers ?? {}) };
 

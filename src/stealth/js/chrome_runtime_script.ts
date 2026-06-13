@@ -15,7 +15,7 @@ if (!(existsAlready || (isNotSecure && !opts.runOnInsecureOrigins))) {
     const makeCustomRuntimeErrors = (preamble, method, extensionId) => ({
         NoMatchingSignature: new TypeError(preamble + 'No matching signature.'),
         MustSpecifyExtensionID: new TypeError(preamble + method + ' called from a webpage must specify an Extension ID (string) for its first argument.'),
-        InvalidExtensionID: new TypeError(preamble + 'Invalid extension id: \'' + extensionId + '\'')
+        InvalidExtensionID: new TypeError(preamble + "Invalid extension id: '" + extensionId + "'")
     })
     const isValidExtensionID = str => str.length === 32 && str.toLowerCase().match(/^[a-p]+$/)
     const sendMessageHandler = {
@@ -51,9 +51,9 @@ if (!(existsAlready || (isNotSecure && !opts.runOnInsecureOrigins))) {
                 if (Object.keys(ci).length === 0) throw Errors.MustSpecifyExtensionID
                 Object.entries(ci).forEach(([k, v]) => {
                     const isExpected = ['name', 'includeTlsChannelId'].includes(k)
-                    if (!isExpected) throw new TypeError(errorPreamble + 'Unexpected property: \'' + k + '\'.')
-                    if (k === 'name' && typeof v !== 'string') throw TypeError(errorPreamble + 'Error at property \'' + k + '\': Invalid type: expected string, found ' + typeof v + '.')
-                    if (k === 'includeTlsChannelId' && typeof v !== 'boolean') throw TypeError(errorPreamble + 'Error at property \'' + k + '\': Invalid type: expected boolean, found ' + typeof v + '.')
+                    if (!isExpected) throw new TypeError(errorPreamble + "Unexpected property: '" + k + "'.")
+                    if (k === 'name' && typeof v !== 'string') throw TypeError(errorPreamble + "Error at property '" + k + "': Invalid type: expected string, found " + typeof v + ".")
+                    if (k === 'includeTlsChannelId' && typeof v !== 'boolean') throw TypeError(errorPreamble + "Error at property '" + k + "': Invalid type: expected boolean, found " + typeof v + ".")
                 })
             }
             if (typeof extensionId === 'object') { validateConnectInfo(extensionId); throw Errors.MustSpecifyExtensionID }
