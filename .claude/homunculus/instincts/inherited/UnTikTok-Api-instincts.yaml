@@ -1,0 +1,278 @@
+# Instincts generated from https://github.com/AlGhozaliRamadhan/UnTikTok-Api
+# Generated: 2026-06-13T02:38:25.195Z
+# Version: 2.0
+# NOTE: This file supplements (does not replace) any existing curated instincts.
+# High-confidence manually curated instincts should be preserved alongside these.
+
+---
+id: UnTikTok-Api-commit-length
+trigger: "when writing a commit message"
+confidence: 0.6
+domain: git
+source: repo-analysis
+source_repo: https://github.com/AlGhozaliRamadhan/UnTikTok-Api
+---
+
+# UnTikTok Api Commit Length
+
+## Action
+
+Keep commit messages concise (~49 characters)
+
+## Evidence
+
+- Average commit message length: 49 chars
+- Based on 2 commits
+
+---
+id: UnTikTok-Api-naming-files
+trigger: "when creating a new file"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/AlGhozaliRamadhan/UnTikTok-Api
+---
+
+# UnTikTok Api Naming Files
+
+## Action
+
+Use camelCase naming convention
+
+## Evidence
+
+- Analyzed file naming patterns in repository
+- Dominant pattern: camelCase
+
+---
+id: UnTikTok-Api-import-relative
+trigger: "when importing modules"
+confidence: 0.75
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/AlGhozaliRamadhan/UnTikTok-Api
+---
+
+# UnTikTok Api Import Relative
+
+## Action
+
+Use relative imports for project files
+
+## Evidence
+
+- Import analysis shows relative import pattern
+- Example: import { x } from '../lib/x'
+
+---
+id: UnTikTok-Api-export-style
+trigger: "when exporting from a module"
+confidence: 0.7
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/AlGhozaliRamadhan/UnTikTok-Api
+---
+
+# UnTikTok Api Export Style
+
+## Action
+
+Prefer named exports
+
+## Evidence
+
+- Export pattern analysis
+- Dominant style: named
+
+---
+id: UnTikTok-Api-test-separate
+trigger: "when writing tests"
+confidence: 0.8
+domain: testing
+source: repo-analysis
+source_repo: https://github.com/AlGhozaliRamadhan/UnTikTok-Api
+---
+
+# UnTikTok Api Test Separate
+
+## Action
+
+Place tests in the tests/ or __tests__/ directory, mirroring src structure
+
+## Evidence
+
+- Separate test directory pattern detected
+- Tests live in dedicated test folders
+
+---
+id: untiktok-api-instinct-file-naming-camelcase
+trigger: "When creating a new file in the codebase"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: AlGhozaliRamadhan/UnTikTok-Api
+---
+
+# Untiktok Api Instinct File Naming Camelcase
+
+## Action
+
+Name the file using camelCase convention
+
+## Evidence
+
+- Pattern in codeStyle.namingConventions.files
+
+---
+id: untiktok-api-instinct-function-naming-camelcase
+trigger: "When defining a new function"
+confidence: 0.9
+domain: code-style
+source: repo-analysis
+source_repo: AlGhozaliRamadhan/UnTikTok-Api
+---
+
+# Untiktok Api Instinct Function Naming Camelcase
+
+## Action
+
+Name the function using camelCase convention
+
+## Evidence
+
+- Pattern in codeStyle.namingConventions.functions
+
+---
+id: untiktok-api-instinct-class-naming-pascalcase
+trigger: "When defining a new class"
+confidence: 0.9
+domain: code-style
+source: repo-analysis
+source_repo: AlGhozaliRamadhan/UnTikTok-Api
+---
+
+# Untiktok Api Instinct Class Naming Pascalcase
+
+## Action
+
+Name the class using PascalCase convention
+
+## Evidence
+
+- Pattern in codeStyle.namingConventions.classes
+
+---
+id: untiktok-api-instinct-constant-naming-screaming-snake-case
+trigger: "When defining a constant"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: AlGhozaliRamadhan/UnTikTok-Api
+---
+
+# Untiktok Api Instinct Constant Naming Screaming Snake Case
+
+## Action
+
+Name the constant using SCREAMING_SNAKE_CASE convention
+
+## Evidence
+
+- Pattern in codeStyle.namingConventions.constants
+
+---
+id: untiktok-api-instinct-import-relative
+trigger: "When importing modules in TypeScript files"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: AlGhozaliRamadhan/UnTikTok-Api
+---
+
+# Untiktok Api Instinct Import Relative
+
+## Action
+
+Use relative import paths
+
+## Evidence
+
+- Pattern in codeStyle.importStyle
+
+---
+id: untiktok-api-instinct-export-named
+trigger: "When exporting modules or functions"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: AlGhozaliRamadhan/UnTikTok-Api
+---
+
+# Untiktok Api Instinct Export Named
+
+## Action
+
+Use named exports
+
+## Evidence
+
+- Pattern in codeStyle.exportStyle
+
+---
+id: untiktok-api-instinct-commit-prefix-build
+trigger: "When making a commit related to build or dependencies"
+confidence: 0.9
+domain: git
+source: repo-analysis
+source_repo: AlGhozaliRamadhan/UnTikTok-Api
+---
+
+# Untiktok Api Instinct Commit Prefix Build
+
+## Action
+
+Prefix the commit message with 'build'
+
+## Evidence
+
+- Seen in commit 'build(deps-dev): bump eslint from 8.57.1 to 10.5.0'
+
+---
+id: untiktok-api-instinct-commit-mixed-format
+trigger: "When writing a commit message"
+confidence: 0.7
+domain: git
+source: repo-analysis
+source_repo: AlGhozaliRamadhan/UnTikTok-Api
+---
+
+# Untiktok Api Instinct Commit Mixed Format
+
+## Action
+
+Allow both conventional and non-conventional commit messages, but prefer including a type prefix when possible
+
+## Evidence
+
+- Seen in commit 'build(deps-dev): bump eslint from 8.57.1 to 10.5.0'
+- Seen in commit 'Fix ESLint 10 issues and migrate to flat config'
+
+---
+id: untiktok-api-instinct-test-location-separate
+trigger: "When adding or organizing tests"
+confidence: 0.8
+domain: testing
+source: repo-analysis
+source_repo: AlGhozaliRamadhan/UnTikTok-Api
+---
+
+# Untiktok Api Instinct Test Location Separate
+
+## Action
+
+Place tests in a separate directory from source code
+
+## Evidence
+
+- Pattern in architecture.folderStructure.testLocation
+
