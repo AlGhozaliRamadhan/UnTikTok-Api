@@ -40,6 +40,42 @@ export class Video {
   /** The raw data associated with this Video */
   asDict?: Record<string, unknown>;
 
+  /** Gets the description/caption of the video */
+  get description(): string | null {
+    return (this.asDict?.["desc"] as string) ?? null;
+  }
+
+  /** Gets the play/view count of the video */
+  get plays(): number {
+    return (this.stats?.["playCount"] as number) || 0;
+  }
+
+  /** Gets the digg/like count of the video */
+  get likes(): number {
+    return (this.stats?.["diggCount"] as number) || 0;
+  }
+
+  /** Gets the comment count of the video */
+  get commentsCount(): number {
+    return (this.stats?.["commentCount"] as number) || 0;
+  }
+
+  /** Gets the share count of the video */
+  get shares(): number {
+    return (this.stats?.["shareCount"] as number) || 0;
+  }
+
+  /** Gets the collect/save count of the video */
+  get saves(): number {
+    return (this.stats?.["collectCount"] as number) || 0;
+  }
+
+  /** Gets whether the video is pinned by the creator */
+  get isPinned(): boolean {
+    const itemControl = this.asDict?.["itemControl"] as Record<string, unknown> | undefined;
+    return Boolean(this.asDict?.["isPinnedItem"]) || Boolean(itemControl?.["isPinned"]);
+  }
+
   constructor(parent: TikTokApi, { id, url, data, sessionIndex, proxy }: VideoOptions = {}) {
     this.parent = parent;
     this.id = id ?? undefined;

@@ -1,8 +1,25 @@
-# Video Downloads Guide
+# Video Metadata & Downloads Guide
 
-The `api.video()` class handles specific video interactions, most notably the ability to download the raw MP4 bytes directly from TikTok's servers.
+The `api.video()` class handles specific video interactions, most notably retrieving video metadata (likes, views) and downloading the raw MP4 bytes directly from TikTok's servers.
 
-## How it works
+## Video Metadata & Stats 🆕
+
+When you retrieve a `Video` object (whether through a user's feed, search, or by URL), you can instantly access its metrics and metadata!
+
+```typescript
+const video = api.video({ url: 'https://www.tiktok.com/@mrbeast/video/12345' });
+await video.info(); // Populates data if you only provided a URL
+
+console.log(`Caption: ${video.description}`);
+console.log(`Views: ${video.plays}`);
+console.log(`Likes: ${video.likes}`);
+console.log(`Comments: ${video.commentsCount}`);
+console.log(`Shares: ${video.shares}`);
+console.log(`Saves/Bookmarks: ${video.saves}`);
+console.log(`Pinned by creator: ${video.isPinned}`);
+```
+
+## How Downloading Works
 
 When you call `.bytes()`, the library bypasses the standard TikTok video player and directly accesses the raw CDN URL (`v16-webapp-prime.tiktok.com` etc). 
 

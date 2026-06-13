@@ -12,6 +12,23 @@ const api = new TikTokApi();
 await api.createSessions({ numSessions: 1 });
 ```
 
+## User Profile Info 🆕
+
+You can fetch rich metadata about a user's profile, including their stats, bio, and verification status:
+
+```typescript
+const user = api.user({ username: 'mrbeast' });
+await user.info(); // Populates the data
+
+console.log(`Display Name: ${user.nickname}`);
+console.log(`Bio: ${user.signature}`);
+console.log(`Link in Bio: ${user.bioLink}`);
+console.log(`Verified: ${user.verified}`);
+console.log(`Followers: ${user.followers}`);
+console.log(`Total Likes: ${user.likes}`);
+console.log(`Profile Picture: ${user.avatar}`);
+```
+
 ## User Videos
 
 The `.videos(count)` method allows you to fetch a user's uploaded videos in reverse chronological order. It acts as an asynchronous generator.
@@ -40,7 +57,20 @@ for await (const video of api.user({ username: 'therock' }).liked(20)) {
 }
 ```
 
-## User Reposts 🆕
+## User Favorited Videos (Collections) 🆕
+
+The `.favorited(count)` method retrieves the videos a user has bookmarked or saved to their collections (the bookmark icon).
+
+**Important Note on Privacy:**
+Just like liked videos, this depends entirely on the user's privacy settings. If their favorites are private, it will return an empty list.
+
+```typescript
+for await (const video of api.user({ username: 'therock' }).favorited(20)) {
+  console.log(`Favorited Video ID: ${video.id}`);
+}
+```
+
+## User Reposts
 
 The `.reposts(count)` method allows you to retrieve the videos a user has reposted to their feed. 
 
@@ -54,6 +84,47 @@ Unlike the mobile app which tells you exactly when a user reposted a video (e.g.
 for await (const video of api.user({ username: 'oja756' }).reposts(20)) {
   console.log(`Reposted Video ID: ${video.id}`);
   console.log(`Original Author: ${video.author?.username}`);
+}
+```
+
+## User Pinned Videos 🆕
+
+The `.pinned(count)` method explicitly filters the user's feed and returns only the videos they have pinned to the top of their profile. 
+
+**How it works:**
+When you view a user's profile on TikTok, any pinned videos are sent at the very beginning of the `api/post/item_list/` feed, regardless of when they were actually posted. This helper explicitly looks for boolean flags inside the raw video data (e.g. `isPinned`, `is_top`) and isolates just the showcased content.
+
+```typescript
+for await (const video of api.user({ username: 'davidteathercodes' }).pinned()) {
+  console.log(`Pinned Video ID: ${video.id}`);
+}
+```
+
+## User Live Status 🆕
+
+You can easily check if a user is currently broadcasting a TikTok Live by checking the `.isLive` getter on the user object. If they are live, the `.roomId` getter will return the ID of the stream.
+
+```typescript
+const user = api.user({ username: 'guinevere.gnv' });
+await user.info(); // Populates the data
+
+if (user.isLive) {
+  console.log(`They are live! Room ID: ${user.roomId}`);
+} else {
+  console.log(`They are currently offline.`);
+}
+```
+
+## Followers & Following Lists 🆕
+
+The `.followersList(count)` and `.followingList(count)` methods let you retrieve the users that a creator is following or who follow them.
+
+**Important Catch:**
+TikTok heavily guards these endpoints to prevent scraping of the social graph. These requests usually fail, return an empty list, or trigger bot verification challenges unless you are providing valid, logged-in session cookies inside the TikTokApi constructor. Even then, they might limit the number of results.
+
+```typescript
+for await (const follower of api.user({ username: 'davidteathercodes' }).followersList(30)) {
+  console.log(`Follower: ${follower.username}`);
 }
 ```
 

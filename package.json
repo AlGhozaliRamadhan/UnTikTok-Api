@@ -1,16 +1,20 @@
 {
   "name": "untiktok-api",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Unofficial TikTok API wrapper in TypeScript (ported from Python)",
-  "main": "dist/src/index.js",
-  "types": "dist/src/index.d.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc -p tsconfig.build.json",
     "dev": "ts-node src/index.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
-    "clean": "rimraf dist"
+    "clean": "rimraf dist",
+    "prepublishOnly": "npm run clean && npm run build"
   },
+  "files": [
+    "dist"
+  ],
   "keywords": [
     "tiktok",
     "api",
@@ -18,8 +22,16 @@
     "typescript",
     "playwright"
   ],
-  "author": "",
+  "author": "AlGhozaliRamadhan",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AlGhozaliRamadhan/UnTikTok-Api.git"
+  },
+  "bugs": {
+    "url": "https://github.com/AlGhozaliRamadhan/UnTikTok-Api/issues"
+  },
+  "homepage": "https://github.com/AlGhozaliRamadhan/UnTikTok-Api#readme",
   "dependencies": {
     "axios": "^1.17.0",
     "https-proxy-agent": "^9.1.0",

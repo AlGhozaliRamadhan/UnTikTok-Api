@@ -1,4 +1,4 @@
-﻿// tests/test_video.ts
+// tests/test_video.ts
 // Mirrors tests/test_video.py
 
 import assert from "assert";
@@ -18,14 +18,16 @@ async function testVideo() {
       headless,
     });
 
-    // Test video by URL
-    const videoUrl = "https://www.tiktok.com/@davidteathercodes/video/7106686413101468970";
+    const videoUrl = "https://www.tiktok.com/@mrbeast/video/7391910609341680927";
     const video = api.video({ url: videoUrl });
     const info = await video.info();
     assert.ok(info !== null, "Video info should not be null");
     assert.ok(video.id !== undefined, "Video id should be set");
     assert.ok(video.author !== undefined, "Video author should be set");
-    console.log(`[SUCCESS] test_video_info passed: id=${video.id}`);
+    assert.ok(video.plays > 0, "Video plays should be extracted");
+    assert.ok(video.likes > 0, "Video likes should be extracted");
+    assert.ok(video.commentsCount > 0, "Video comments should be extracted");
+    console.log(`[SUCCESS] test_video_info passed: id=${video.id}, views=${video.plays}, likes=${video.likes}`);
 
     // Test video comments
     let commentCount = 0;

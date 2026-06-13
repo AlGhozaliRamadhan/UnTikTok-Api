@@ -1,4 +1,4 @@
-﻿// tests/test_user.ts
+// tests/test_user.ts
 // Mirrors tests/test_user.py
 
 import assert from "assert";
@@ -25,7 +25,22 @@ async function testUser() {
     assert.ok(user.userId !== undefined, "userId should be set");
     assert.ok(user.secUid !== undefined, "secUid should be set");
     assert.strictEqual(user.username, "therock", `Expected username 'therock', got '${user.username}'`);
-    console.log(`[SUCCESS] test_user_info passed: userId=${user.userId}`);
+    assert.strictEqual(typeof user.isLive, "boolean", "isLive should be a boolean");
+    assert.ok(user.roomId === null || typeof user.roomId === "string", "roomId should be null or string");
+    
+    // New metadata getters
+    assert.strictEqual(typeof user.followers, "number", "followers should be a number");
+    assert.strictEqual(typeof user.following, "number", "following should be a number");
+    assert.strictEqual(typeof user.likes, "number", "likes should be a number");
+    assert.strictEqual(typeof user.videoCount, "number", "videoCount should be a number");
+    assert.strictEqual(typeof user.verified, "boolean", "verified should be a boolean");
+    assert.strictEqual(typeof user.isPrivate, "boolean", "isPrivate should be a boolean");
+    assert.ok(user.nickname === null || typeof user.nickname === "string", "nickname should be string or null");
+    assert.ok(user.signature === null || typeof user.signature === "string", "signature should be string or null");
+    assert.ok(user.bioLink === null || typeof user.bioLink === "string", "bioLink should be string or null");
+    assert.ok(user.avatar === null || typeof user.avatar === "string", "avatar should be string or null");
+    
+    console.log(`[SUCCESS] test_user_info passed: userId=${user.userId}, followers=${user.followers}, isLive=${user.isLive}`);
 
     // Test user videos
     let videoCount = 0;
@@ -51,6 +66,39 @@ async function testUser() {
       repostsCount++;
     }
     console.log(`[SUCCESS] test_user_reposts passed: got ${repostsCount} reposts`);
+
+    // Test user pinned
+    const userWithPinned = api.user({ username: "davidteathercodes" });
+    let pinnedCount = 0;
+    for await (const video of userWithPinned.pinned(3)) {
+      assert.ok(video.id !== undefined, "Pinned video id should be set");
+      pinnedCount++;
+    }
+    console.log(`[SUCCESS] test_user_pinned passed: got ${pinnedCount} pinned videos`);
+
+    // Test user favorited
+    let favoritedCount = 0;
+    for await (const video of user.favorited(5)) {
+      assert.ok(video.id !== undefined, "Favorited video id should be set");
+      favoritedCount++;
+    }
+    console.log(`[SUCCESS] test_user_favorited passed: got ${favoritedCount} favorited videos (may be 0 if private)`);
+
+    // Test followersList (expecting 0 without cookies, but ensuring it doesn't crash)
+    let followersListCount = 0;
+    for await (const follower of user.followersList(5)) {
+      assert.ok(follower.userId !== undefined, "Follower user id should be set");
+      followersListCount++;
+    }
+    console.log(`[SUCCESS] test_user_followersList passed: got ${followersListCount} followers (requires auth)`);
+
+    // Test followingList (expecting 0 without cookies, but ensuring it doesn't crash)
+    let followingListCount = 0;
+    for await (const following of user.followingList(5)) {
+      assert.ok(following.userId !== undefined, "Following user id should be set");
+      followingListCount++;
+    }
+    console.log(`[SUCCESS] test_user_followingList passed: got ${followingListCount} following (requires auth)`);
   } finally {
     await api.closeSessions();
   }

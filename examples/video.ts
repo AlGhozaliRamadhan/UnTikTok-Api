@@ -15,14 +15,31 @@ async function videoExample() {
     browser: (process.env.TIKTOK_BROWSER as "chromium" | "firefox" | "webkit") ?? "chromium",
   });
 
-  // Get video by URL
-  const videoUrl = "https://www.tiktok.com/@davidteathercodes/video/7106686413101468970";
-  const video = await TikTokApi.prototype.video.call(api, {
-    url: videoUrl,
-  });
+  // Instead of a hardcoded URL which can get flagged by captchas, 
+  // let's grab the absolute latest video from a user's feed dynamically!
+  const user = api.user({ username: "mrbeast" });
+  let video: any = null;
+  
+  for await (const v of user.videos(1)) {
+    video = v;
+  }
 
-  const videoInfo = await video.info();
-  console.log("Video info:", videoInfo);
+  if (!video) {
+    console.error("Could not find any videos for this user.");
+    return;
+  }
+
+  console.log("\n--- Latest Video Metadata ---");
+  console.log(`Video ID: ${video.id}`);
+  console.log(`Caption: ${video.description}`);
+  console.log(`Views: ${video.plays}`);
+  console.log(`Likes: ${video.likes}`);
+  console.log(`Comments: ${video.commentsCount}`);
+  console.log(`Shares: ${video.shares}`);
+  console.log(`Saves/Bookmarks: ${video.saves}`);
+  console.log(`Pinned by creator: ${video.isPinned}`);
+
+  console.log("\n--- Fetching Comments ---");
 
   // Download the video
   const bytes = await video.bytes() as Buffer;

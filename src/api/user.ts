@@ -38,6 +38,125 @@ export class User {
   }
 
   /**
+   * Returns whether the user is currently live on TikTok.
+   * Based on the presence of a non-zero roomId in the user info data.
+   */
+  get isLive(): boolean {
+    return this.roomId !== null;
+  }
+
+  /**
+   * Returns the roomId of the user if they are currently live on TikTok.
+   * Returns null if they are not live.
+   */
+  get roomId(): string | null {
+    const data = this.asDict ?? {};
+    
+    // Check inside userInfo.user
+    if (data["userInfo"]) {
+      const user = (data["userInfo"] as Record<string, any>)["user"];
+      if (user) {
+        if (user["roomId"] && user["roomId"] !== "0" && user["roomId"] !== 0) {
+          return String(user["roomId"]);
+        }
+        if (user["room_id"] && user["room_id"] !== "0" && user["room_id"] !== 0) {
+          return String(user["room_id"]);
+        }
+      }
+    }
+    
+    // Check root level
+    if (data["roomId"] && data["roomId"] !== "0" && data["roomId"] !== 0) {
+      return String(data["roomId"]);
+    }
+    if (data["room_id"] && data["room_id"] !== "0" && data["room_id"] !== 0) {
+      return String(data["room_id"]);
+    }
+
+    // Check if roomData exists (fallback)
+    if (data["roomData"] || data["room_data"]) {
+      return "unknown_room_id";
+    }
+
+    return null;
+  }
+
+  /** Gets the user's display name */
+  get nickname(): string | null {
+    return this._extractUserInfoValue("nickname") as string | null;
+  }
+
+  /** Gets the user's bio / signature */
+  get signature(): string | null {
+    return this._extractUserInfoValue("signature") as string | null;
+  }
+
+  /** Gets whether the user is a verified account */
+  get verified(): boolean {
+    return Boolean(this._extractUserInfoValue("verified"));
+  }
+
+  /** Gets whether the user has a private account */
+  get isPrivate(): boolean {
+    return Boolean(this._extractUserInfoValue("privateAccount"));
+  }
+
+  /** Gets the user's follower count */
+  get followers(): number {
+    return (this._extractUserStatsValue("followerCount") as number) || 0;
+  }
+
+  /** Gets the user's following count */
+  get following(): number {
+    return (this._extractUserStatsValue("followingCount") as number) || 0;
+  }
+
+  /** Gets the user's total likes (hearts) */
+  get likes(): number {
+    return (this._extractUserStatsValue("heartCount") as number) || 0;
+  }
+
+  /** Gets the user's total video count */
+  get videoCount(): number {
+    return (this._extractUserStatsValue("videoCount") as number) || 0;
+  }
+
+  /** Gets the user's link in bio */
+  get bioLink(): string | null {
+    const bioLinkObj = this._extractUserInfoValue("bioLink") as Record<string, any> | undefined;
+    return bioLinkObj?.link ?? null;
+  }
+
+  /** Gets the user's profile picture URL (largest available) */
+  get avatar(): string | null {
+    return (this._extractUserInfoValue("avatarLarger") as string) || 
+           (this._extractUserInfoValue("avatarMedium") as string) || 
+           (this._extractUserInfoValue("avatarThumb") as string) || null;
+  }
+
+  private _extractUserInfoValue(key: string): unknown {
+    const data = this.asDict ?? {};
+    if (data["userInfo"]) {
+      const user = (data["userInfo"] as Record<string, any>)["user"];
+      if (user && user[key] !== undefined) return user[key];
+    }
+    return data[key] ?? null;
+  }
+
+  private _extractUserStatsValue(key: string): unknown {
+    const data = this.asDict ?? {};
+    if (data["userInfo"]) {
+      const stats = (data["userInfo"] as Record<string, any>)["stats"];
+      if (stats && stats[key] !== undefined) return stats[key];
+    }
+    if (data["stats"]) {
+      const stats = data["stats"] as Record<string, any>;
+      if (stats[key] !== undefined) return stats[key];
+    }
+    return data[key] ?? null;
+  }
+
+  /**
    * Returns a dictionary of information associated with this User.
    *
    * @example
@@ -178,6 +297,42 @@ export class User {
   }
 
   /**
+   * Returns a user's pinned videos.
+   *
+   * @example
+   * ```ts
+   * for await (const video of api.user({ username: 'davidteathercodes' }).pinned()) {
+   *   console.log(video.id);
+   * }
+   * ```
+   */
+  async *pinned(
+    count = 3,
+    kwargs: { headers?: Record<string, string>; sessionIndex?: number } = {}
+  ): AsyncGenerator<Video> {
+    // Pinned videos are always sent at the top of the videos feed
+    // We fetch a batch of videos and explicitly filter for pinned flags
+    let found = 0;
+    
+    // We only need to check the first few videos since pinned are always at top
+    for await (const video of this.videos(10, 0, kwargs)) {
+      const data = video.asDict ?? {};
+      const isPinned = data["isPinned"] === true || 
+                       data["is_pinned"] === true ||
+                       data["isTop"] === true ||
+                       data["is_top"] === true ||
+                       data["isTopItem"] === true ||
+                       data["is_top_item"] === true;
+                       
+      if (isPinned) {
+        yield video;
+        found++;
+        if (found >= count) break;
+      }
+    }
+  }
+
+  /**
    * Returns a user's liked posts (if public).
    *
    * @example
@@ -276,6 +431,159 @@ export class User {
 
       if (!resp["hasMore"]) return;
       cursor = resp["cursor"] as number;
+    }
+  }
+
+  /**
+   * Returns a user's favorited/bookmarked videos (Collections).
+   * Note: This relies entirely on the user's privacy settings.
+   *
+   * @example
+   * ```ts
+   * for await (const fav of api.user({ username: 'davidteathercodes' }).favorited()) {
+   *   console.log(fav.id);
+   * }
+   * ```
+   */
+  async *favorited(
+    count = 30,
+    cursor = 0,
+    kwargs: { headers?: Record<string, string>; sessionIndex?: number } = {}
+  ): AsyncGenerator<Video> {
+    if (!this.secUid) {
+      await this.info(kwargs);
+    }
+    let found = 0;
+
+    while (found < count) {
+      const params: Record<string, unknown> = {
+        secUid: this.secUid,
+        count: 30,
+        cursor,
+      };
+
+      const resp = await this.parent.makeRequest({
+        url: "https://www.tiktok.com/api/user/collect/item_list/",
+        params,
+        headers: kwargs.headers,
+        sessionIndex: kwargs.sessionIndex,
+      });
+
+      if (resp == null) {
+        throw new InvalidResponseException(resp, "TikTok returned an invalid response.");
+      }
+
+      const itemList = (resp["itemList"] as Record<string, unknown>[]) ?? [];
+      for (const item of itemList) {
+        yield this.parent.video({ data: item });
+        found++;
+      }
+
+      if (!resp["hasMore"]) return;
+      cursor = resp["cursor"] as number;
+    }
+  }
+
+  /**
+   * Returns a user's followers list.
+   * Note: This endpoint is heavily guarded and usually requires a logged-in session (cookies).
+   * It may also quickly return errors or bot challenges.
+   *
+   * @example
+   * ```ts
+   * for await (const follower of api.user({ username: 'davidteathercodes' }).followersList()) {
+   *   console.log(follower.username);
+   * }
+   * ```
+   */
+  async *followersList(
+    count = 30,
+    cursor = 0,
+    kwargs: { headers?: Record<string, string>; sessionIndex?: number } = {}
+  ): AsyncGenerator<User> {
+    if (!this.secUid) {
+      await this.info(kwargs);
+    }
+    let found = 0;
+
+    while (found < count) {
+      const params: Record<string, unknown> = {
+        secUid: this.secUid,
+        count: 30,
+        minCursor: cursor,
+        maxCursor: cursor,
+      };
+
+      const resp = await this.parent.makeRequest({
+        url: "https://www.tiktok.com/api/user/list/",
+        params,
+        headers: kwargs.headers,
+        sessionIndex: kwargs.sessionIndex,
+      });
+
+      if (resp == null) {
+        throw new InvalidResponseException(resp, "TikTok returned an invalid response.");
+      }
+
+      const userList = (resp["userList"] as Record<string, unknown>[]) ?? [];
+      for (const item of userList) {
+        yield this.parent.user({ data: item });
+        found++;
+      }
+
+      if (!resp["hasMore"]) return;
+      cursor = resp["minCursor"] as number || resp["maxCursor"] as number;
+    }
+  }
+
+  /**
+   * Returns a user's following list.
+   * Note: Like followers, this is heavily guarded and requires authentication.
+   *
+   * @example
+   * ```ts
+   * for await (const following of api.user({ username: 'davidteathercodes' }).followingList()) {
+   *   console.log(following.username);
+   * }
+   * ```
+   */
+  async *followingList(
+    count = 30,
+    cursor = 0,
+    kwargs: { headers?: Record<string, string>; sessionIndex?: number } = {}
+  ): AsyncGenerator<User> {
+    if (!this.secUid) {
+      await this.info(kwargs);
+    }
+    let found = 0;
+
+    while (found < count) {
+      const params: Record<string, unknown> = {
+        secUid: this.secUid,
+        count: 30,
+        minCursor: cursor,
+        maxCursor: cursor,
+      };
+
+      const resp = await this.parent.makeRequest({
+        url: "https://www.tiktok.com/api/user/following/",
+        params,
+        headers: kwargs.headers,
+        sessionIndex: kwargs.sessionIndex,
+      });
+
+      if (resp == null) {
+        throw new InvalidResponseException(resp, "TikTok returned an invalid response.");
+      }
+
+      const userList = (resp["userList"] as Record<string, unknown>[]) ?? [];
+      for (const item of userList) {
+        yield this.parent.user({ data: item });
+        found++;
+      }
+
+      if (!resp["hasMore"]) return;
+      cursor = resp["minCursor"] as number || resp["maxCursor"] as number;
     }
   }
 

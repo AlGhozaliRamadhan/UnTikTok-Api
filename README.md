@@ -4,6 +4,7 @@
 > 
 > **Disclaimer:** This project is not affiliated with, endorsed by, or connected to TikTok, ByteDance, or the original author of the Python TikTok-Api. It is an independent, open-source TypeScript port designed for integration into Node.js applications and AI tools.
 
+[![NPM Version](https://img.shields.io/npm/v/untiktok-api?color=red)](https://www.npmjs.com/package/untiktok-api)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?logo=typescript)](https://www.typescriptlang.org/)
 [![Playwright](https://img.shields.io/badge/Playwright-1.44+-green?logo=playwright)](https://playwright.dev/)
 [![Node.js](https://img.shields.io/badge/Node.js-18+-brightgreen?logo=node.js)](https://nodejs.org/)
@@ -27,7 +28,7 @@ This API allows you to extract and automate interactions with TikTok data withou
 
 **Capabilities include:**
 - **Trending Feeds:** Fetch the most viral and trending videos on the platform.
-- **User Profiles:** Retrieve a user's uploaded videos, liked videos, **reposted videos**, and profile information.
+- **User Profiles:** Retrieve a user's uploaded videos, liked videos, **favorited videos**, **reposted videos**, **pinned videos**, **followers/following lists**, profile information, and **live stream status**.
 - **Hashtags:** Fetch videos under specific hashtags.
 - **Search:** Search for specific users or videos by keyword.
 - **Comments:** Extract comments and replies from specific videos, including support for **TikTok Stickers**.
@@ -38,21 +39,23 @@ This API allows you to extract and automate interactions with TikTok data withou
 
 ## Installation
 
-First, clone the repository and navigate into the project directory:
+Install the package directly from NPM:
+```bash
+npm install untiktok-api
+```
+
+Since this wrapper relies on Playwright to interface with TikTok, you must also install the required Playwright browsers (specifically Chromium):
+```bash
+npx playwright install chromium
+```
+
+### Building from Source
+
+If you want to contribute, modify, or build the project locally:
 ```bash
 git clone https://github.com/AlGhozaliRamadhan/UnTikTok-Api.git
 cd UnTikTok-Api
 npm install
-npx playwright install chromium
-```
-
-TypeScript check (no emit):
-```bash
-npm run typecheck
-```
-
-Build to `dist/`:
-```bash
 npm run build
 ```
 
