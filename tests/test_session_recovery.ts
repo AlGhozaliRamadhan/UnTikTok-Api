@@ -1,4 +1,4 @@
-// tests/test_session_recovery.ts
+﻿// tests/test_session_recovery.ts
 // Mirrors tests/test_session_recovery.py
 //
 // Tests the session recovery, health check, and auto-cleanup features of TikTokApi.
@@ -25,7 +25,7 @@ async function testGetResourceStats() {
     assert.strictEqual(stats.invalidSessions, 0, `Expected 0 invalid sessions, got ${stats.invalidSessions}`);
     assert.strictEqual(stats.hasBrowser, true, "Browser should be open");
     assert.strictEqual(stats.cleanupCalled, false, "Cleanup should not have been called");
-    console.log("✅ test_get_resource_stats passed");
+    console.log("[SUCCESS] test_get_resource_stats passed");
   } finally {
     await api.closeSessions();
   }
@@ -33,7 +33,7 @@ async function testGetResourceStats() {
   const statsAfter = api.getResourceStats();
   assert.strictEqual(statsAfter.totalSessions, 0, "Sessions should be cleared after close");
   assert.strictEqual(statsAfter.cleanupCalled, true, "Cleanup should be marked as called");
-  console.log("✅ test_stats_after_close passed");
+  console.log("[SUCCESS] test_stats_after_close passed");
 }
 
 async function testHealthCheck() {
@@ -49,7 +49,7 @@ async function testHealthCheck() {
     const health = await api.healthCheck();
     assert.strictEqual(health.totalSessions, 1, `Expected 1 session, got ${health.totalSessions}`);
     assert.strictEqual(health.healthySessions, 1, `Expected 1 healthy session, got ${health.healthySessions}`);
-    console.log("✅ test_health_check passed");
+    console.log("[SUCCESS] test_health_check passed");
     console.log("Health:", JSON.stringify(health, null, 2));
   } finally {
     await api.closeSessions();
@@ -72,7 +72,7 @@ async function testAllowPartialSessions() {
 
     const stats = api.getResourceStats();
     assert.ok(stats.totalSessions >= 1, "Should have at least 1 session with allowPartialSessions");
-    console.log(`✅ test_allow_partial_sessions passed: ${stats.totalSessions} sessions created`);
+    console.log(`[SUCCESS] test_allow_partial_sessions passed: ${stats.totalSessions} sessions created`);
   } finally {
     await api.closeSessions();
   }
@@ -97,7 +97,7 @@ async function testAutoCleanupDeadSessions() {
 
     // With autoCleanup enabled (default), the session should be removed
     assert.strictEqual(api.sessions.length, 0, `Expected 0 sessions after marking invalid, got ${api.sessions.length}`);
-    console.log("✅ test_auto_cleanup_dead_sessions passed");
+    console.log("[SUCCESS] test_auto_cleanup_dead_sessions passed");
   } finally {
     await api.closeSessions();
   }
@@ -109,10 +109,11 @@ async function runAll() {
   await testHealthCheck();
   await testAllowPartialSessions();
   await testAutoCleanupDeadSessions();
-  console.log("✅ All session recovery tests passed");
+  console.log("[SUCCESS] All session recovery tests passed");
 }
 
 runAll().catch((err) => {
   console.error(err);
   process.exit(1);
 });
+

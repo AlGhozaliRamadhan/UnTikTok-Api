@@ -1,4 +1,4 @@
-import { TikTokApi } from '../src';
+﻿import { TikTokApi } from '../src';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -53,3 +53,4 @@ async function testPopularVideo() {
 }
 
 testPopularVideo().catch(console.error);
+

@@ -1,4 +1,4 @@
-// tests/test_sound.ts
+﻿// tests/test_sound.ts
 // Mirrors tests/test_sound.py
 
 import assert from "assert";
@@ -23,7 +23,7 @@ async function testSound() {
     assert.ok(info !== null, "Sound info should not be null");
     assert.ok(sound.id !== undefined, "Sound id should be set");
     assert.ok(sound.title !== undefined, "Sound title should be set");
-    console.log(`✅ test_sound_info passed: id=${sound.id} title=${sound.title}`);
+    console.log(`[SUCCESS] test_sound_info passed: id=${sound.id} title=${sound.title}`);
 
     let videoCount = 0;
     for await (const video of sound.videos(30)) {
@@ -31,7 +31,7 @@ async function testSound() {
       videoCount++;
     }
     assert.ok(videoCount > 0, "Should have at least 1 video");
-    console.log(`✅ test_sound_videos passed: got ${videoCount} videos`);
+    console.log(`[SUCCESS] test_sound_videos passed: got ${videoCount} videos`);
   } finally {
     await api.closeSessions();
   }
@@ -41,3 +41,4 @@ testSound().catch((err) => {
   console.error(err);
   process.exit(1);
 });
+

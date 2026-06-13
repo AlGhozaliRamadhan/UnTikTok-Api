@@ -1,4 +1,4 @@
-// tests/test_hashtag.ts
+﻿// tests/test_hashtag.ts
 // Mirrors tests/test_hashtag.py
 
 import assert from "assert";
@@ -23,7 +23,7 @@ async function testHashtag() {
     assert.ok(info !== null, "Hashtag info should not be null");
     assert.ok(tag.id !== undefined, "Hashtag id should be set");
     assert.ok(tag.name !== undefined, "Hashtag name should be set");
-    console.log(`✅ test_hashtag_info passed: id=${tag.id} name=${tag.name}`);
+    console.log(`[SUCCESS] test_hashtag_info passed: id=${tag.id} name=${tag.name}`);
 
     let videoCount = 0;
     for await (const video of tag.videos(30)) {
@@ -31,7 +31,7 @@ async function testHashtag() {
       videoCount++;
     }
     assert.ok(videoCount > 0, "Should have at least 1 video");
-    console.log(`✅ test_hashtag_videos passed: got ${videoCount} videos`);
+    console.log(`[SUCCESS] test_hashtag_videos passed: got ${videoCount} videos`);
   } finally {
     await api.closeSessions();
   }
@@ -41,3 +41,4 @@ testHashtag().catch((err) => {
   console.error(err);
   process.exit(1);
 });
+

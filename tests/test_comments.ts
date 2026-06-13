@@ -1,4 +1,4 @@
-// tests/test_comments.ts
+﻿// tests/test_comments.ts
 // Mirrors tests/test_comments.py
 
 import assert from "assert";
@@ -28,7 +28,7 @@ async function testComments() {
     }
 
     assert.ok(commentCount > 0, "Should have at least 1 comment");
-    console.log(`✅ test_comments passed: got ${commentCount} comments`);
+    console.log(`[SUCCESS] test_comments passed: got ${commentCount} comments`);
   } finally {
     await api.closeSessions();
   }
@@ -38,3 +38,4 @@ testComments().catch((err) => {
   console.error(err);
   process.exit(1);
 });
+

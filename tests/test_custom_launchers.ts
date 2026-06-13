@@ -1,4 +1,4 @@
-// tests/test_custom_launchers.ts
+﻿// tests/test_custom_launchers.ts
 // Mirrors tests/test_custom_launchers.py
 //
 // Tests custom pageFactory and browserContextFactory options.
@@ -27,7 +27,7 @@ async function testCustomPageFactory() {
     });
 
     assert.strictEqual(api.sessions.length, 1, `Expected 1 session from custom pageFactory, got ${api.sessions.length}`);
-    console.log("✅ test_custom_page_factory passed");
+    console.log("[SUCCESS] test_custom_page_factory passed");
   } finally {
     await api.closeSessions();
   }
@@ -45,7 +45,7 @@ async function testSuppressResourceLoading() {
     });
 
     assert.strictEqual(api.sessions.length, 1, "Expected 1 session with resource suppression");
-    console.log("✅ test_suppress_resource_loading passed");
+    console.log("[SUCCESS] test_suppress_resource_loading passed");
   } finally {
     await api.closeSessions();
   }
@@ -63,7 +63,7 @@ async function testMultipleBrowserTypes() {
         browser,
       });
       assert.strictEqual(api.sessions.length, 1, `Expected 1 session with ${browser}`);
-      console.log(`✅ test_browser_${browser} passed`);
+      console.log(`[SUCCESS] test_browser_${browser} passed`);
     } finally {
       await api.closeSessions();
     }
@@ -75,10 +75,11 @@ async function runAll() {
   await testCustomPageFactory();
   await testSuppressResourceLoading();
   await testMultipleBrowserTypes();
-  console.log("✅ All custom launcher tests passed");
+  console.log("[SUCCESS] All custom launcher tests passed");
 }
 
 runAll().catch((err) => {
   console.error(err);
   process.exit(1);
 });
+

@@ -1,4 +1,4 @@
-// tests/test_video.ts
+﻿// tests/test_video.ts
 // Mirrors tests/test_video.py
 
 import assert from "assert";
@@ -25,7 +25,7 @@ async function testVideo() {
     assert.ok(info !== null, "Video info should not be null");
     assert.ok(video.id !== undefined, "Video id should be set");
     assert.ok(video.author !== undefined, "Video author should be set");
-    console.log(`✅ test_video_info passed: id=${video.id}`);
+    console.log(`[SUCCESS] test_video_info passed: id=${video.id}`);
 
     // Test video comments
     let commentCount = 0;
@@ -35,14 +35,14 @@ async function testVideo() {
       commentCount++;
     }
     assert.ok(commentCount > 0, "Should have at least 1 comment");
-    console.log(`✅ test_video_comments passed: got ${commentCount} comments`);
+    console.log(`[SUCCESS] test_video_comments passed: got ${commentCount} comments`);
 
     // Test related videos
     let relatedCount = 0;
     for await (const related of video.relatedVideos(5)) {
       relatedCount++;
     }
-    console.log(`✅ test_video_related passed: got ${relatedCount} related videos`);
+    console.log(`[SUCCESS] test_video_related passed: got ${relatedCount} related videos`);
   } finally {
     await api.closeSessions();
   }
@@ -52,3 +52,4 @@ testVideo().catch((err) => {
   console.error(err);
   process.exit(1);
 });
+

@@ -1,4 +1,4 @@
-// tests/test_trending.ts
+﻿// tests/test_trending.ts
 // Mirrors tests/test_trending.py
 
 import assert from "assert";
@@ -24,7 +24,7 @@ async function testTrending() {
     }
 
     assert.ok(count >= 100, `Expected >= 100 videos, got ${count}`);
-    console.log(`✅ test_trending passed: got ${count} videos`);
+    console.log(`[SUCCESS] test_trending passed: got ${count} videos`);
   } finally {
     await api.closeSessions();
   }
@@ -34,3 +34,4 @@ testTrending().catch((err) => {
   console.error(err);
   process.exit(1);
 });
+

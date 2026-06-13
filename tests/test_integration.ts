@@ -1,4 +1,4 @@
-// tests/test_integration.ts
+﻿// tests/test_integration.ts
 // Mirrors tests/test_integration.py
 //
 // High-level integration test that runs a full real-world flow.
@@ -27,7 +27,7 @@ async function testIntegration() {
       trendingCount++;
     }
     assert.ok(trendingCount > 0, "Integration: trending must return videos");
-    console.log(`✅ integration_trending: ${trendingCount} videos`);
+    console.log(`[SUCCESS] integration_trending: ${trendingCount} videos`);
 
     // 2. User info + videos
     const user = api.user({ username: "therock" });
@@ -38,7 +38,7 @@ async function testIntegration() {
       userVideoCount++;
     }
     assert.ok(userVideoCount > 0, "Integration: user must have videos");
-    console.log(`✅ integration_user: ${userVideoCount} videos`);
+    console.log(`[SUCCESS] integration_user: ${userVideoCount} videos`);
 
     // 3. Hashtag
     const tag = api.hashtag({ name: "funny" });
@@ -48,9 +48,9 @@ async function testIntegration() {
     for await (const v of tag.videos(3)) {
       tagVideoCount++;
     }
-    console.log(`✅ integration_hashtag: ${tagVideoCount} videos`);
+    console.log(`[SUCCESS] integration_hashtag: ${tagVideoCount} videos`);
 
-    console.log("✅ Full integration test passed");
+    console.log("[SUCCESS] Full integration test passed");
   } finally {
     await api.closeSessions();
   }
@@ -60,3 +60,4 @@ testIntegration().catch((err) => {
   console.error(err);
   process.exit(1);
 });
+

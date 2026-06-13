@@ -1,4 +1,4 @@
-// tests/test_search.ts
+﻿// tests/test_search.ts
 // Mirrors tests/test_search.py
 
 import assert from "assert";
@@ -24,7 +24,7 @@ async function testSearch() {
       userCount++;
     }
     assert.ok(userCount > 0, "Should have at least 1 user result");
-    console.log(`✅ test_search_users passed: got ${userCount} users`);
+    console.log(`[SUCCESS] test_search_users passed: got ${userCount} users`);
   } finally {
     await api.closeSessions();
   }
@@ -34,3 +34,4 @@ testSearch().catch((err) => {
   console.error(err);
   process.exit(1);
 });
+

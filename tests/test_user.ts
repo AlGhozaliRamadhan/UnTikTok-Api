@@ -1,4 +1,4 @@
-// tests/test_user.ts
+﻿// tests/test_user.ts
 // Mirrors tests/test_user.py
 
 import assert from "assert";
@@ -25,7 +25,7 @@ async function testUser() {
     assert.ok(user.userId !== undefined, "userId should be set");
     assert.ok(user.secUid !== undefined, "secUid should be set");
     assert.strictEqual(user.username, "therock", `Expected username 'therock', got '${user.username}'`);
-    console.log(`✅ test_user_info passed: userId=${user.userId}`);
+    console.log(`[SUCCESS] test_user_info passed: userId=${user.userId}`);
 
     // Test user videos
     let videoCount = 0;
@@ -34,14 +34,14 @@ async function testUser() {
       videoCount++;
     }
     assert.ok(videoCount > 0, "Should have at least 1 video");
-    console.log(`✅ test_user_videos passed: got ${videoCount} videos`);
+    console.log(`[SUCCESS] test_user_videos passed: got ${videoCount} videos`);
 
     // Test user liked
     let likedCount = 0;
     for await (const video of user.liked(5)) {
       likedCount++;
     }
-    console.log(`✅ test_user_liked passed: got ${likedCount} liked videos (may be 0 if private)`);
+    console.log(`[SUCCESS] test_user_liked passed: got ${likedCount} liked videos (may be 0 if private)`);
 
     // Test user reposts
     const userWithReposts = api.user({ username: "oja756" });
@@ -50,7 +50,7 @@ async function testUser() {
       assert.ok(video.id !== undefined, "Repost video id should be set");
       repostsCount++;
     }
-    console.log(`✅ test_user_reposts passed: got ${repostsCount} reposts`);
+    console.log(`[SUCCESS] test_user_reposts passed: got ${repostsCount} reposts`);
   } finally {
     await api.closeSessions();
   }
@@ -60,3 +60,4 @@ testUser().catch((err) => {
   console.error(err);
   process.exit(1);
 });
+
