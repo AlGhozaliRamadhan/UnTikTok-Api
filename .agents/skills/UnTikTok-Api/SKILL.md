@@ -62,6 +62,14 @@ This skill teaches you the core development patterns and conventions used in the
 1. Run the build command (likely via npm/yarn, e.g., `npm run build`).
 2. Ensure output is free of errors and warnings.
 
+### Check NPM Sync
+**Trigger:** When verifying if the GitHub repository and NPM package are aligned  
+**Command:** `/check-npm`
+
+1. Read `package.json` to check the current version of the project.
+2. Fetch the latest version published to the NPM registry (e.g., using `npm view untiktok-api version`).
+3. Compare the two versions. If they match, confidently output "its done". If they do not match, advise the user that the NPM package is not yet aligned with the GitHub repository.
+
 ## Testing Patterns
 
 - Test files follow the `*.test.*` naming convention (e.g., `userProfile.test.ts`).
@@ -74,4 +82,5 @@ This skill teaches you the core development patterns and conventions used in the
 | /add-feature  | Scaffold and implement a new feature/module  |
 | /run-tests    | Execute all test suites                      |
 | /build        | Build the project for deployment             |
+| /check-npm    | Check if GitHub repo and NPM package are synced |
 ```
