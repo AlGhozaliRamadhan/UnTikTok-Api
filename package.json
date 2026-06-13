@@ -8,24 +8,30 @@
     "build": "tsc",
     "dev": "ts-node src/index.ts",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src --ext .ts",
+    "lint": "eslint src",
     "clean": "rimraf dist"
   },
-  "keywords": ["tiktok", "api", "scraper", "typescript", "playwright"],
+  "keywords": [
+    "tiktok",
+    "api",
+    "scraper",
+    "typescript",
+    "playwright"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "playwright": "^1.44.0",
     "axios": "^1.17.0",
-    "https-proxy-agent": "^9.1.0"
+    "https-proxy-agent": "^9.1.0",
+    "playwright": "^1.44.0"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/node": "^25.9.2",
-    "typescript": "^6.0.3",
-    "ts-node": "^10.9.2",
+    "eslint": "^10.5.0",
     "rimraf": "^6.1.3",
-    "eslint": "^8.57.0",
-    "@typescript-eslint/parser": "^7.1.0",
-    "@typescript-eslint/eslint-plugin": "^7.1.0"
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.61.0"
   }
 }
