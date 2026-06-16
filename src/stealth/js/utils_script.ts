@@ -99,7 +99,7 @@ utils.splitObjPath = objPath => ({
 })
 utils.replaceObjPathWithProxy = (objPath, handler) => {
   const { objName, propName } = utils.splitObjPath(objPath)
-  const obj = eval(objName)
+  const obj = objName.split('.').reduce((o, i) => o ? o[i] : undefined, window)
   return utils.replaceWithProxy(obj, propName, handler)
 }
 utils.execRecursively = (obj = {}, typeFilter = [], fn) => {
