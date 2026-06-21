@@ -1,6 +1,6 @@
 {
   "name": "untiktok-api",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "Unofficial TikTok API wrapper in TypeScript (ported from Python)",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -36,6 +36,9 @@
     "axios": "^1.17.0",
     "https-proxy-agent": "^9.1.0",
     "playwright": "^1.44.0"
+  },
+  "overrides": {
+    "form-data": ">=4.0.6"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
