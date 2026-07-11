@@ -6,7 +6,7 @@
 import type { TikTokApi } from "../tiktok";
 import type { User } from "./user";
 import type { Video } from "./video";
-import { InvalidResponseException } from "../exceptions";
+import { InvalidResponseException, InvalidParameterException } from "../exceptions";
 
 export interface SoundOptions {
   id?: string | null;
@@ -40,7 +40,7 @@ export class Sound {
       this.asDict = data;
       this._extractFromData();
     } else if (id == null) {
-      throw new TypeError("You must provide id parameter.");
+      throw new InvalidParameterException(null, "You must provide id parameter.");
     } else {
       this.id = id;
     }
@@ -61,7 +61,8 @@ export class Sound {
   } = {}): Promise<Record<string, unknown>> {
     const id = this.id;
     if (!id) {
-      throw new TypeError(
+      throw new InvalidParameterException(
+        null,
         "You must provide the id when creating this class to use this method."
       );
     }
@@ -104,7 +105,8 @@ export class Sound {
   ): AsyncGenerator<Video> {
     const id = this.id;
     if (!id) {
-      throw new TypeError(
+      throw new InvalidParameterException(
+        null,
         "You must provide the id when creating this class to use this method."
       );
     }

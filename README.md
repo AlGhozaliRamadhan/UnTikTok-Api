@@ -6,8 +6,8 @@
 
 [![NPM Version](https://img.shields.io/npm/v/untiktok-api?color=red)](https://www.npmjs.com/package/untiktok-api)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?logo=typescript)](https://www.typescriptlang.org/)
-[![Playwright](https://img.shields.io/badge/Playwright-1.44+-green?logo=playwright)](https://playwright.dev/)
-[![Node.js](https://img.shields.io/badge/Node.js-18+-brightgreen?logo=node.js)](https://nodejs.org/)
+[![Playwright](https://img.shields.io/badge/Playwright-1.61-green?logo=playwright)](https://playwright.dev/)
+[![Node.js](https://img.shields.io/badge/Node.js-20.10+-brightgreen?logo=node.js)](https://nodejs.org/)
 
 ---
 
@@ -28,10 +28,10 @@ This API allows you to extract and automate interactions with TikTok data withou
 
 **Capabilities include:**
 - **Trending Feeds:** Fetch the most viral and trending videos on the platform.
-- **User Profiles:** Retrieve a user's uploaded videos, liked videos, **favorited videos**, **reposted videos**, **pinned videos**, **followers/following lists**, profile information, and **live stream status**.
+- **User Profiles:** Retrieve a user's uploaded videos, liked videos, favorited videos, reposted videos, pinned videos, followers/following lists, profile information, and live stream status.
 - **Hashtags:** Fetch videos under specific hashtags.
 - **Search:** Search for specific users or videos by keyword.
-- **Comments:** Extract comments and replies from specific videos, including support for **TikTok Stickers**.
+- **Comments:** Extract comments and replies from specific videos, including support for TikTok Stickers.
 - **Sounds/Music:** Retrieve videos associated with a specific audio track or sound.
 - **Downloads:** Download raw video bytes (without watermarks) and audio streams directly.
 
@@ -76,7 +76,7 @@ For a full list of classes, methods, and constructor options, check out the [API
 For detailed examples and tutorials on how to use specific features, check out the dedicated guides in the `docs/` folder:
 
 - [Trending Videos](./docs/trending.md)
-- [User Data (Videos, Likes, Reposts) 🆕](./docs/user.md)
+- [User Data (Videos, Likes, Reposts)](./docs/user.md)
 - [Hashtag Videos](./docs/hashtag.md)
 - [Search Users](./docs/search.md)
 - [Download Videos](./docs/download.md)

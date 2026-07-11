@@ -7,7 +7,7 @@ The `api.search` module allows you to tap into TikTok's internal search engine. 
 When you query for a user, the library interacts with the web search endpoints (`api/search/user/full/`) to return users that match the keyword. TikTok's algorithm dictates the relevance and order of these results.
 
 **Rate Limiting Warning:**
-The search endpoint is notoriously one of the most heavily rate-limited endpoints on TikTok. Attempting to rapidly scrape hundreds of search pages will almost certainly trigger an `EmptyResponseException`. Use small counts and sleep between aggressive requests.
+The search endpoint is notoriously one of the most heavily rate-limited endpoints on TikTok. Attempting to rapidly scrape hundreds of search pages will almost certainly trigger an `EmptyResponseException` (often combined with `CaptchaException` once bot detection fully kicks in). Use small counts and sleep between aggressive requests.
 
 ## Example Usage
 

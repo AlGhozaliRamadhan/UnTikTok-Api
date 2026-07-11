@@ -12,7 +12,7 @@ const api = new TikTokApi();
 await api.createSessions({ numSessions: 1 });
 ```
 
-## User Profile Info 🆕
+## User Profile Info
 
 You can fetch rich metadata about a user's profile, including their stats, bio, and verification status:
 
@@ -57,7 +57,7 @@ for await (const video of api.user({ username: 'therock' }).liked(20)) {
 }
 ```
 
-## User Favorited Videos (Collections) 🆕
+## User Favorited Videos (Collections)
 
 The `.favorited(count)` method retrieves the videos a user has bookmarked or saved to their collections (the bookmark icon).
 
@@ -87,7 +87,7 @@ for await (const video of api.user({ username: 'oja756' }).reposts(20)) {
 }
 ```
 
-## User Pinned Videos 🆕
+## User Pinned Videos
 
 The `.pinned(count)` method explicitly filters the user's feed and returns only the videos they have pinned to the top of their profile. 
 
@@ -100,7 +100,7 @@ for await (const video of api.user({ username: 'davidteathercodes' }).pinned()) 
 }
 ```
 
-## User Live Status 🆕
+## User Live Status
 
 You can easily check if a user is currently broadcasting a TikTok Live by checking the `.isLive` getter on the user object. If they are live, the `.roomId` getter will return the ID of the stream.
 
@@ -115,7 +115,7 @@ if (user.isLive) {
 }
 ```
 
-## Followers & Following Lists 🆕
+## Followers & Following Lists
 
 The `.followersList(count)` and `.followingList(count)` methods let you retrieve the users that a creator is following or who follow them.
 

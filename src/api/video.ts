@@ -9,7 +9,11 @@ import type { User } from "./user";
 import type { Sound } from "./sound";
 import type { Hashtag } from "./hashtag";
 import type { Comment } from "./comment";
-import { InvalidResponseException } from "../exceptions";
+import {
+  InvalidResponseException,
+  InvalidParameterException,
+  EmptyResponseException,
+} from "../exceptions";
 
 export interface VideoOptions {
   id?: string | null;
@@ -95,7 +99,7 @@ export class Video {
       // otherwise we schedule an async resolution and store the raw url.
       // If the url already has the video id embedded we resolve it immediately.
       if (url.includes("/video/")) {
-        this.id = url.split("/video/")[1].split("?")[0];
+        this.id = url.split("/video/")[1]!.split("?")[0];
       }
       // If not, the caller must await Video.fromUrl() instead.
     }
@@ -104,7 +108,10 @@ export class Video {
       if (data) {
         this.parent.logger.warn(`Video data provided is missing 'id': ${JSON.stringify(data)}`);
       } else {
-        throw new TypeError("You must provide id or url parameter.");
+        throw new InvalidParameterException(
+          null,
+          "You must provide id or url parameter."
+        );
       }
     }
   }
@@ -129,10 +136,11 @@ export class Video {
       (response.request as { res?: { responseUrl?: string } })?.res?.responseUrl ?? url;
 
     if (finalUrl.includes("@") && finalUrl.includes("/video/")) {
-      const videoId = finalUrl.split("/video/")[1].split("?")[0];
+      const videoId = finalUrl.split("/video/")[1]!.split("?")[0];
       return new Video(parent, { id: videoId, url });
     }
-    throw new TypeError(
+    throw new InvalidParameterException(
+      null,
       "URL format not supported. Example:\nhttps://www.tiktok.com/@therock/video/6829267836783971589"
     );
   }
@@ -157,7 +165,10 @@ export class Video {
     const proxy = kwargs.proxy ?? (session.proxy as string | undefined);
 
     if (!this.url) {
-      throw new TypeError("To call video.info() you need to set the video's url.");
+        throw new InvalidParameterException(
+          null,
+          "To call video.info() you need to set the video's url."
+        );
     }
 
     let text: string;
@@ -170,10 +181,9 @@ export class Video {
       const maxAttempts = 15;
       for (let attempt = 1; attempt <= maxAttempts; attempt++) {
         const hasTag = await session.page.evaluate(() => {
-          const doc = (globalThis as any).document;
           return !!(
-            doc?.getElementById("__UNIVERSAL_DATA_FOR_REHYDRATION__") ||
-            doc?.getElementById("SIGI_STATE")
+            document?.getElementById("__UNIVERSAL_DATA_FOR_REHYDRATION__") ||
+            document?.getElementById("SIGI_STATE")
           );
         });
         if (hasTag) {
@@ -183,7 +193,10 @@ export class Video {
         await new Promise((resolve) => setTimeout(resolve, 1000));
       }
       if (!found) {
-        throw new Error("Script tags (__UNIVERSAL_DATA_FOR_REHYDRATION__ or SIGI_STATE) not found in page DOM after timeout.");
+        throw new EmptyResponseException(
+          { url: this.url },
+          "Script tags (__UNIVERSAL_DATA_FOR_REHYDRATION__ or SIGI_STATE) not found in page DOM after timeout."
+        );
       }
       text = await session.page.content();
     } catch (fetchErr) {
@@ -287,7 +300,10 @@ export class Video {
     const downloadAddr = videoData["downloadAddr"] || videoData["playAddr"];
 
     if (!downloadAddr) {
-      throw new Error("No download address found. Have you called .info() first?");
+      throw new EmptyResponseException(
+        { id: this.id, url: this.url },
+        "No download address found. Have you called .info() first?"
+      );
     }
 
     // Python sets cookies as a dict directly from get_session_cookies
@@ -307,10 +323,11 @@ export class Video {
 
     if (options.stream) {
       async function* streamGen(): AsyncGenerator<Buffer> {
-        const resp = await axios.get<NodeJS.ReadableStream>(downloadAddr, {
+        const resp = await axios.get<NodeJS.ReadableStream>(downloadAddr!, {
           headers,
           responseType: "stream",
         });
+        if (!resp.data) throw new InvalidResponseException(null, "No stream data received", resp.status ?? undefined);
         for await (const chunk of resp.data) {
           // cast via unknown to avoid TS string↔Uint8Array overlap error
           yield Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as unknown as Uint8Array);
@@ -477,9 +494,9 @@ function _parseCookieHeaders(
   return headers.map((h) => {
     const parts = h.split(";").map((p) => p.trim());
     const [nameVal, ...attrs] = parts;
-    const eqIdx = nameVal.indexOf("=");
-    const name = nameVal.slice(0, eqIdx);
-    const value = nameVal.slice(eqIdx + 1);
+    const eqIdx = (nameVal ?? "").indexOf("=");
+    const name = (nameVal ?? "").slice(0, eqIdx);
+    const value = (nameVal ?? "").slice(eqIdx + 1);
 
     const cookie: Record<string, unknown> = { name, value, domain, path: "/" };
     for (const attr of attrs) {

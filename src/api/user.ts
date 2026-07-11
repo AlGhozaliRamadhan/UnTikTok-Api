@@ -6,7 +6,7 @@
 import type { TikTokApi } from "../tiktok";
 import type { Video } from "./video";
 import type { Playlist } from "./playlist";
-import { InvalidResponseException } from "../exceptions";
+import { InvalidResponseException, InvalidParameterException } from "../exceptions";
 
 export interface UserOptions {
   username?: string | null;
@@ -54,7 +54,7 @@ export class User {
     
     // Check inside userInfo.user
     if (data["userInfo"]) {
-      const user = (data["userInfo"] as Record<string, any>)["user"];
+      const user = (data["userInfo"] as Record<string, unknown>)["user"] as Record<string, unknown> | undefined;
       if (user) {
         if (user["roomId"] && user["roomId"] !== "0" && user["roomId"] !== 0) {
           return String(user["roomId"]);
@@ -123,8 +123,9 @@ export class User {
 
   /** Gets the user's link in bio */
   get bioLink(): string | null {
-    const bioLinkObj = this._extractUserInfoValue("bioLink") as Record<string, any> | undefined;
-    return bioLinkObj?.link ?? null;
+    const bioLinkObj = this._extractUserInfoValue("bioLink") as Record<string, unknown> | undefined;
+    const link = bioLinkObj?.link;
+    return typeof link === "string" ? link : null;
   }
 
   /** Gets the user's profile picture URL (largest available) */
@@ -137,7 +138,7 @@ export class User {
   private _extractUserInfoValue(key: string): unknown {
     const data = this.asDict ?? {};
     if (data["userInfo"]) {
-      const user = (data["userInfo"] as Record<string, any>)["user"];
+      const user = (data["userInfo"] as Record<string, unknown>)["user"] as Record<string, unknown> | undefined;
       if (user && user[key] !== undefined) return user[key];
     }
     return data[key] ?? null;
@@ -146,11 +147,11 @@ export class User {
   private _extractUserStatsValue(key: string): unknown {
     const data = this.asDict ?? {};
     if (data["userInfo"]) {
-      const stats = (data["userInfo"] as Record<string, any>)["stats"];
+      const stats = (data["userInfo"] as Record<string, unknown>)["stats"] as Record<string, unknown> | undefined;
       if (stats && stats[key] !== undefined) return stats[key];
     }
     if (data["stats"]) {
-      const stats = data["stats"] as Record<string, any>;
+      const stats = data["stats"] as Record<string, unknown>;
       if (stats[key] !== undefined) return stats[key];
     }
     return data[key] ?? null;
@@ -171,7 +172,8 @@ export class User {
   } = {}): Promise<Record<string, unknown>> {
     const username = this.username;
     if (!username) {
-      throw new TypeError(
+      throw new InvalidParameterException(
+        null,
         "You must provide the username when creating this class to use this method."
       );
     }
@@ -593,7 +595,9 @@ export class User {
 
     if (keys.includes("userInfo")) {
       const userInfo = (data["userInfo"] as Record<string, Record<string, string>>)["user"];
-      this._updateIdSecUidUsername(userInfo["id"], userInfo["secUid"], userInfo["uniqueId"]);
+      if (userInfo) {
+        this._updateIdSecUidUsername(userInfo["id"], userInfo["secUid"], userInfo["uniqueId"]);
+      }
     } else {
       this._updateIdSecUidUsername(
         data["id"] as string | undefined,

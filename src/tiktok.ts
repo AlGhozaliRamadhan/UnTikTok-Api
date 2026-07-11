@@ -12,7 +12,15 @@ import { randomInt } from "crypto";
 import { URL } from "url";
 
 import type { TikTokPlaywrightSession, CreateSessionsOptions, ResourceStats, HealthCheckResult } from "./types";
-import { EmptyResponseException, InvalidJSONException } from "./exceptions";
+import {
+  EmptyResponseException,
+  InvalidJSONException,
+  InvalidParameterException,
+  SessionUnavailableException,
+  CaptchaException,
+  NotFoundException,
+  SoundRemovedException,
+} from "./exceptions";
 import { randomChoice, sleep } from "./helpers";
 import { stealthAsync } from "./stealth";
 
@@ -215,19 +223,19 @@ export class TikTokApi {
       if (kwargs.sessionIndex != null) {
         const i = kwargs.sessionIndex;
         if (i < this.sessions.length) {
-          const session = this.sessions[i];
+          const session = this.sessions[i]!;
           if (await this._isSessionValid(session)) return [i, session];
           this.logger.warn(`Requested session ${i} is invalid`);
         }
       } else {
         const validSessions: Array<[number, TikTokPlaywrightSession]> = [];
         for (let idx = 0; idx < this.sessions.length; idx++) {
-          if (await this._isSessionValid(this.sessions[idx])) {
-            validSessions.push([idx, this.sessions[idx]]);
+          if (await this._isSessionValid(this.sessions[idx]!)) {
+            validSessions.push([idx, this.sessions[idx]!]);
           }
         }
         if (validSessions.length > 0) {
-          return validSessions[randomInt(0, validSessions.length)];
+          return validSessions[randomInt(0, validSessions.length)]!;
         }
       }
 
@@ -239,7 +247,8 @@ export class TikTokApi {
       }
     }
 
-    throw new Error(
+    throw new SessionUnavailableException(
+      null,
       "No valid sessions available. All sessions appear to be dead. " +
       "Please call createSessions() again."
     );
@@ -267,10 +276,10 @@ export class TikTokApi {
 
   _getSession(kwargs: { sessionIndex?: number } = {}): [number, TikTokPlaywrightSession] {
     if (this.sessions.length === 0) {
-      throw new Error("No sessions created, please create sessions first");
+      throw new SessionUnavailableException(null, "No sessions created, please create sessions first");
     }
     const i = kwargs.sessionIndex ?? randomInt(0, this.sessions.length);
-    return [i, this.sessions[i]];
+    return [i, this.sessions[i]!];
   }
 
   // ── Create sessions ──
@@ -339,7 +348,10 @@ export class TikTokApi {
           executablePath: executablePath ?? undefined,
         });
       } else {
-        throw new Error("Invalid browser argument. Use 'chromium', 'firefox', or 'webkit'.");
+        throw new InvalidParameterException(
+          null,
+          "Invalid browser argument. Use 'chromium', 'firefox', or 'webkit'."
+        );
       }
     }
 
@@ -387,7 +399,8 @@ export class TikTokApi {
           .filter((r): r is PromiseRejectedResult => r.status === "rejected")
           .slice(0, 3)
           .map((r) => String(r.reason));
-        throw new Error(
+        throw new InvalidParameterException(
+          null,
           `Failed to create minimum required sessions. Created ${succeeded}/${numSessions}, needed ${minRequired}.\n` +
           `Errors: ${errors.join("; ")}`
         );
@@ -593,9 +606,10 @@ export class TikTokApi {
         break;
       } catch (e) {
         if (attempt === maxAttempts - 1) {
-          // eslint-disable-next-line preserve-caught-error
-          throw new Error(
-            `Failed to load tiktok after ${maxAttempts} attempts, consider using a proxy`
+          throw new EmptyResponseException(
+            { url },
+            `Failed to load tiktok after ${maxAttempts} attempts, consider using a proxy`,
+            undefined
           );
         }
         const tryUrls = [
@@ -603,7 +617,7 @@ export class TikTokApi {
           "https://www.tiktok.com",
           "https://www.tiktok.com/@tiktok",
         ];
-        await session.page.goto(tryUrls[randomInt(0, tryUrls.length)]);
+        await session.page.goto(tryUrls[randomInt(0, tryUrls.length)]!);
       }
     }
 
@@ -630,7 +644,7 @@ export class TikTokApi {
     }
 
     const xBogus = (await this.generateXBogus(url, { sessionIndex: i }))["X-Bogus"];
-    if (!xBogus) throw new Error("Failed to generate X-Bogus");
+    if (!xBogus) throw new EmptyResponseException({ url }, "Failed to generate X-Bogus");
 
     return url + (url.includes("?") ? "&" : "?") + `X-Bogus=${xBogus}`;
   }
@@ -643,9 +657,12 @@ export class TikTokApi {
    */
   async saveSessionState(path: string, sessionIndex = 0): Promise<void> {
     if (this.sessions.length <= sessionIndex) {
-      throw new Error(`Session index ${sessionIndex} does not exist`);
+      throw new SessionUnavailableException(
+        null,
+        `Session index ${sessionIndex} does not exist`
+      );
     }
-    const session = this.sessions[sessionIndex];
+    const session = this.sessions[sessionIndex]!;
     if (session.context) {
       await session.context.storageState({ path });
       this.logger.info(`Session state saved to ${path}`);
@@ -716,41 +733,76 @@ export class TikTokApi {
       try {
         const result = await this.runFetchScript(signedUrl, headers, { sessionIndex: i });
 
-        if (result == null) throw new Error("runFetchScript returned null");
+        // Null on every attempt — Uniform EmptyResponseException, not raw Error.
+        if (result == null) {
+          throw new EmptyResponseException(
+            { url },
+            "runFetchScript returned null"
+          );
+        }
         if (result === "") {
           throw new EmptyResponseException(
-            result,
+            { url },
             "TikTok returned an empty response. They are detecting you're a bot. " +
             "Try: headless=false, browser='webkit', or a proxy."
           );
         }
 
+        let data: Record<string, unknown>;
         try {
-          const data = JSON.parse(result) as Record<string, unknown>;
-          if (data["status_code"] !== 0) {
-            this.logger.error(`Got unexpected status code: ${JSON.stringify(data)}`);
-          }
-          return data;
+          data = JSON.parse(result) as Record<string, unknown>;
         } catch {
-          if (retryCount === retries) {
-            this.logger.error(`Failed to decode JSON response: ${result}`);
-            throw new InvalidJSONException(result);
-          }
-          this.logger.info(`Failed a request, retrying (${retryCount}/${retries})`);
-          if (exponentialBackoff) {
-            await sleep(2 ** retryCount * 1000);
-          } else {
-            await sleep(1000);
-          }
+          // Throw on every JSON-decode failure so callers see the cause on attempt 1
+          // (the outer catch then decides whether to retry).
+          throw new InvalidJSONException({ url, body: result });
         }
-      } catch (e) {
-        if (e instanceof EmptyResponseException || e instanceof InvalidJSONException) throw e;
 
+        // Dispatch on response shape before returning.
+        // ADR-010: wire the previously-dead CaptchaException / NotFoundException / SoundRemovedException.
+        // status_code is the conventional TikTok signal; some endpoints also use `error_code`.
+        const statusCode = data["status_code"];
+        if (statusCode !== 0 && statusCode !== undefined) {
+          const statusStr = typeof statusCode === "string" ? statusCode.toLowerCase() : "";
+          if (statusStr.includes("captcha") || data["captcha"] != null) {
+            throw new CaptchaException({ url, ...data }, `TikTok served a captcha challenge`, Number(data["error_code"]) || undefined);
+          }
+          if (
+            statusCode === 10201 || statusCode === 10202 || statusCode === 2155 ||
+            data["status_msg"] === "Video not found" || data["status_msg"] === "User not found"
+          ) {
+            throw new NotFoundException({ url, ...data }, `TikTok: ${String(data["status_msg"] ?? "not found")} (${statusCode})`, Number(data["error_code"]) || undefined);
+          }
+          if (data["status_msg"] === "Music not found" || data["music"] === null) {
+            throw new SoundRemovedException({ url, ...data }, `TikTok: music removed or not found (${statusCode})`, Number(data["error_code"]) || undefined);
+          }
+          this.logger.error(`Got unexpected status code: ${JSON.stringify(data)}`);
+        }
+
+        return data;
+      } catch (e) {
+        // Already-classified response failures bubble up immediately — no point
+        // retrying them with a different session.
+        if (
+          e instanceof EmptyResponseException ||
+          e instanceof InvalidJSONException ||
+          e instanceof CaptchaException ||
+          e instanceof NotFoundException ||
+          e instanceof SoundRemovedException
+        ) {
+          throw e;
+        }
+
+        // Unclassified Playwright error — kill this session and try another.
         this.logger.error(`Playwright error during request: ${e}`);
         await this._markSessionInvalid(session);
 
         if (retryCount < retries) {
           this.logger.info(`Retrying with a new session (${retryCount}/${retries})`);
+          if (exponentialBackoff) {
+            await sleep(2 ** retryCount * 1000);
+          } else {
+            await sleep(1000);
+          }
           try {
             [i, session] = await this._getValidSessionIndex({ sessionIndex });
           } catch (sessionErr) {
@@ -763,7 +815,7 @@ export class TikTokApi {
       }
     }
 
-    throw new Error("makeRequest: exhausted all retries");
+    throw new EmptyResponseException({ url }, "makeRequest: exhausted all retries");
   }
 
   // ── Close / cleanup ──

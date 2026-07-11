@@ -5,7 +5,7 @@
 
 import type { TikTokApi } from "../tiktok";
 import type { Video } from "./video";
-import { InvalidResponseException } from "../exceptions";
+import { InvalidResponseException, InvalidParameterException } from "../exceptions";
 
 export interface HashtagOptions {
   name?: string | null;
@@ -54,7 +54,8 @@ export class Hashtag {
     sessionIndex?: number;
   } = {}): Promise<Record<string, unknown>> {
     if (!this.name) {
-      throw new TypeError(
+      throw new InvalidParameterException(
+        null,
         "You must provide the name when creating this class to use this method."
       );
     }

@@ -1,6 +1,6 @@
 # Session Caching & Bot Evasion
 
-TikTok utilizes incredibly aggressive bot detection mechanisms (like Cloudflare, heavily obfuscated JavaScript, and behavioral tracking). If you make too many requests too quickly, or if your browser lacks cookies, TikTok will return an `EmptyResponseException` and block your requests.
+TikTok utilizes incredibly aggressive bot detection mechanisms (like Cloudflare, heavily obfuscated JavaScript, and behavioral tracking). If you make too many requests too quickly, or if your browser lacks cookies, TikTok will block your requests by returning an `EmptyResponseException` (often alongside a `CaptchaException` once the threshold is crossed).
 
 To mitigate this, you should **cache your session state** and reuse it.
 

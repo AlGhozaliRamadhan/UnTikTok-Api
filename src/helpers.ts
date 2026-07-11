@@ -5,6 +5,7 @@
 
 import axios from "axios";
 import { randomInt } from "crypto";
+import { InvalidParameterException } from "./exceptions";
 
 /**
  * Extract the video ID from a TikTok URL, following redirects.
@@ -29,10 +30,11 @@ export async function extractVideoIdFromUrl(
     url;
 
   if (finalUrl.includes("@") && finalUrl.includes("/video/")) {
-    return finalUrl.split("/video/")[1].split("?")[0];
+    return finalUrl.split("/video/")[1]!.split("?")[0]!;
   }
 
-  throw new TypeError(
+  throw new InvalidParameterException(
+    null,
     "URL format not supported. Example of a supported URL:\n" +
       "https://www.tiktok.com/@therock/video/6829267836783971589"
   );

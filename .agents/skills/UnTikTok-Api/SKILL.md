@@ -70,6 +70,22 @@ This skill teaches you the core development patterns and conventions used in the
 2. Fetch the latest version published to the NPM registry (e.g., using `npm view untiktok-api version`).
 3. Compare the two versions. If they match, confidently output "its done". If they do not match, advise the user that the NPM package is not yet aligned with the GitHub repository.
 
+### Releasing to NPM
+**Trigger:** When the user wants to publish a new version to NPM  
+**Command:** `/release`
+
+> **Important:** Publishing to NPM is NEVER done by running `npm publish` locally. This project uses a GitHub Actions workflow (`.github/workflows/publish.yml`) that publishes to NPM automatically when a GitHub Release is published. Locally running `npm publish` must be avoided.
+
+1. Read `package.json` to verify the current `version` matches what the user wants to release.
+2. If there is an ongoing release flow that already updated `package.json`, verify that the working tree has been committed and pushed to `main`. If not, commit and push the changes first.
+3. Create a GitHub Release tagged with the version from `package.json` using:
+   ```bash
+   gh release create v<version> --title "<version>" --notes "Release <version>"
+   ```
+   - Example: for `package.json` version `1.0.7`, run `gh release create v1.0.7 --title "1.0.7" --notes "Release 1.0.7"`.
+4. That release event triggers `.github/workflows/publish.yml`, which builds the project and publishes the package to NPM with provenance.
+5. Do NOT run `npm login`, `npm whoami`, or `npm publish` locally. If the user asks for a direct local publish, remind them that this project is configured to ship via GitHub Releases and offer to create the release instead.
+
 ## Testing Patterns
 
 - Test files follow the `*.test.*` naming convention (e.g., `userProfile.test.ts`).
@@ -83,4 +99,5 @@ This skill teaches you the core development patterns and conventions used in the
 | /run-tests    | Execute all test suites                      |
 | /build        | Build the project for deployment             |
 | /check-npm    | Check if GitHub repo and NPM package are synced |
+| /release      | Publish a new version to NPM via GitHub Release |
 ```

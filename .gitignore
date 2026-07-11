@@ -101,7 +101,6 @@ dist
 
 # vuepress v2.x temp and cache directory
 .temp
-.cache
 
 # Docusaurus cache and generated files
 .docusaurus
@@ -139,3 +138,11 @@ test-results/
 *.mp3
 state.json
 *state.json
+
+# Local-only — never committed
+# Architecture decision records are a working scratchpad, not a published asset.
+docs/decisions/
+# Agent-config / skill folders belong to the developer's local toolchain.
+.claude/
+.codex/
+.agents/

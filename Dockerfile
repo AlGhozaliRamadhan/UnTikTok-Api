@@ -1,5 +1,7 @@
-# Use the official Playwright image which includes Node.js and all browser dependencies
-FROM mcr.microsoft.com/playwright:v1.44.0-jammy
+# Use the official Playwright image which includes Node.js and all browser dependencies.
+# The base image version MUST match the playwright npm driver version — see ADR-004
+# and scripts/check-playwright-version.mjs (runs in CI to catch drift).
+FROM mcr.microsoft.com/playwright:v1.61.0-jammy
 
 # Set the working directory
 WORKDIR /app

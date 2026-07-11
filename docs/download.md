@@ -2,7 +2,7 @@
 
 The `api.video()` class handles specific video interactions, most notably retrieving video metadata (likes, views) and downloading the raw MP4 bytes directly from TikTok's servers.
 
-## Video Metadata & Stats 🆕
+## Video Metadata & Stats
 
 When you retrieve a `Video` object (whether through a user's feed, search, or by URL), you can instantly access its metrics and metadata!
 

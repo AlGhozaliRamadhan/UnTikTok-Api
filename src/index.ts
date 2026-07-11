@@ -14,6 +14,8 @@ export { Playlist } from "./api/playlist";
 
 export {
   TikTokException,
+  InvalidParameterException,
+  SessionUnavailableException,
   CaptchaException,
   NotFoundException,
   EmptyResponseException,

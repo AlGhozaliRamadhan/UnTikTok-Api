@@ -3,3 +3,24 @@ dist
 .git
 .github
 *.log
+
+# .gitignore parity — never leak secrets into image context (ADR-005)
+.env*
+state.json
+*state.json
+*cookies*.json
+*session*.json
+storageState*.json
+examples/.cache/
+
+# Non-runtime source — keep image context small and secrets-free
+tests/
+docs/
+*.md
+
+# Test/coverage artifacts
+coverage
+.nyc_output
+playwright-report/
+test-results/
+*.lcov

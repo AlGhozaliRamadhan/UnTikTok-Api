@@ -6,7 +6,7 @@
 import type { TikTokApi } from "../tiktok";
 import type { Video } from "./video";
 import type { User } from "./user";
-import { InvalidResponseException } from "../exceptions";
+import { InvalidResponseException, InvalidParameterException } from "../exceptions";
 
 export interface PlaylistOptions {
   id?: string | null;
@@ -33,7 +33,7 @@ export class Playlist {
   constructor(parent: TikTokApi, { id, data }: PlaylistOptions = {}) {
     this.parent = parent;
     if (!id && !data?.["id"]) {
-      throw new TypeError("You must provide id parameter.");
+      throw new InvalidParameterException(null, "You must provide id parameter.");
     }
     this.id = id ?? undefined;
 
@@ -58,7 +58,8 @@ export class Playlist {
   } = {}): Promise<Record<string, unknown>> {
     const id = this.id;
     if (!id) {
-      throw new TypeError(
+      throw new InvalidParameterException(
+        null,
         "You must provide the playlist id when creating this class to use this method."
       );
     }
