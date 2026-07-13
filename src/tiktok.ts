@@ -16,6 +16,7 @@ import {
   EmptyResponseException,
   InvalidJSONException,
   InvalidParameterException,
+  InvalidResponseException,
   SessionUnavailableException,
   CaptchaException,
   NotFoundException,
@@ -23,6 +24,7 @@ import {
 } from "./exceptions";
 import { randomChoice, sleep } from "./helpers";
 import { stealthAsync } from "./stealth";
+import { z } from "zod";
 
 import { User, type UserOptions } from "./api/user";
 import { Video, type VideoOptions } from "./api/video";
@@ -72,6 +74,13 @@ export interface MakeRequestOptions {
   retries?: number;
   exponentialBackoff?: boolean;
   sessionIndex?: number;
+  /**
+   * Optional zod schema validating the response shape at the boundary
+   * (ADR-007). When provided, `makeRequest` parses the JSON through the schema
+   * and returns the narrowed/normalized type; a shape mismatch throws
+   * `InvalidResponseException` wrapping the zod issues.
+   */
+  schema?: z.ZodType;
 }
 
 // ---------------------------------------------------------------------------
@@ -671,7 +680,16 @@ export class TikTokApi {
 
   // ── makeRequest ──
 
-  async makeRequest(options: MakeRequestOptions): Promise<Record<string, unknown>> {
+  /**
+   * Variant with a zod `schema` (ADR-007): validates + normalizes the response
+   * at the boundary and returns the schema's inferred type.
+   */
+  async makeRequest<S extends z.ZodType>(
+    options: MakeRequestOptions & { schema: S }
+  ): Promise<z.infer<S>>;
+  /** Legacy variant (no schema): returns the raw parsed JSON object. */
+  async makeRequest(options: MakeRequestOptions): Promise<Record<string, unknown>>;
+  async makeRequest(options: MakeRequestOptions & { schema?: z.ZodType }): Promise<unknown> {
     const {
       url,
       headers: extraHeaders = null,
@@ -679,6 +697,7 @@ export class TikTokApi {
       retries = 3,
       exponentialBackoff = true,
       sessionIndex,
+      schema,
     } = options;
 
     let i: number;
@@ -776,6 +795,20 @@ export class TikTokApi {
             throw new SoundRemovedException({ url, ...data }, `TikTok: music removed or not found (${statusCode})`, Number(data["error_code"]) || undefined);
           }
           this.logger.error(`Got unexpected status code: ${JSON.stringify(data)}`);
+        }
+
+        // ADR-007: validate the response shape at the boundary when a schema
+        // was supplied. A mismatch throws InvalidResponseException (a
+        // TikTokException subclass) so callers catch it uniformly.
+        if (schema) {
+          const parsed = schema.safeParse(data);
+          if (!parsed.success) {
+            throw new InvalidResponseException(
+              { url, data, issues: parsed.error.issues },
+              `TikTok response did not match the expected schema: ${parsed.error.message}`
+            );
+          }
+          return parsed.data;
         }
 
         return data;

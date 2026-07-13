@@ -6,6 +6,7 @@
 import type { TikTokApi } from "../tiktok";
 import type { Video } from "./video";
 import { InvalidResponseException } from "../exceptions";
+import { trendingFeedResponseSchema } from "../schemas";
 
 export class Trending {
   /** Static reference to the parent TikTokApi instance */
@@ -44,20 +45,20 @@ export class Trending {
         params,
         headers: kwargs.headers,
         sessionIndex: kwargs.sessionIndex,
+        schema: trendingFeedResponseSchema,
       });
 
       if (resp == null) {
         throw new InvalidResponseException(resp, "TikTok returned an invalid response.");
       }
 
-      const itemList = (resp["itemList"] as Record<string, unknown>[]) ?? [];
-      if (itemList.length === 0) return; // If no items returned, stop to avoid infinite loop
-      for (const item of itemList) {
+      if (resp.itemList.length === 0) return; // If no items returned, stop to avoid infinite loop
+      for (const item of resp.itemList) {
         yield this.parent.video({ data: item });
         found++;
       }
 
-      if (!resp["hasMore"]) return;
+      if (!resp.hasMore) return;
     }
   }
 }

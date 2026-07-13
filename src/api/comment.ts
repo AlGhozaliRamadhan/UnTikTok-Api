@@ -6,6 +6,7 @@
 import type { TikTokApi } from "../tiktok";
 import type { User } from "./user";
 import { InvalidResponseException } from "../exceptions";
+import { commentListResponseSchema } from "../schemas";
 
 export class Comment {
   /** Static reference to the parent TikTokApi instance */
@@ -89,20 +90,20 @@ export class Comment {
         params,
         headers: kwargs.headers,
         sessionIndex: kwargs.sessionIndex,
+        schema: commentListResponseSchema,
       });
 
       if (resp == null) {
         throw new InvalidResponseException(resp, "TikTok returned an invalid response.");
       }
 
-      const comments = (resp["comments"] as Record<string, unknown>[]) ?? [];
-      for (const comment of comments) {
+      for (const comment of resp.comments) {
         yield this.parent.comment({ data: comment });
         found++;
       }
 
-      if (!resp["has_more"]) return;
-      cursor = resp["cursor"] as number;
+      if (!resp.hasMore) return;
+      cursor = resp.cursor;
     }
   }
 

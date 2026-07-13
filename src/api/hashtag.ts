@@ -6,6 +6,7 @@
 import type { TikTokApi } from "../tiktok";
 import type { Video } from "./video";
 import { InvalidResponseException, InvalidParameterException } from "../exceptions";
+import { hashtagDetailResponseSchema, itemListResponseSchema } from "../schemas";
 
 export interface HashtagOptions {
   name?: string | null;
@@ -70,6 +71,7 @@ export class Hashtag {
       params: urlParams,
       headers: kwargs.headers,
       sessionIndex: kwargs.sessionIndex,
+      schema: hashtagDetailResponseSchema,
     });
 
     if (resp == null) {
@@ -113,20 +115,20 @@ export class Hashtag {
         params,
         headers: kwargs.headers,
         sessionIndex: kwargs.sessionIndex,
+        schema: itemListResponseSchema,
       });
 
       if (resp == null) {
         throw new InvalidResponseException(resp, "TikTok returned an invalid response.");
       }
 
-      const itemList = (resp["itemList"] as Record<string, unknown>[]) ?? [];
-      for (const item of itemList) {
+      for (const item of resp.itemList) {
         yield this.parent.video({ data: item });
         found++;
       }
 
-      if (!resp["hasMore"]) return;
-      cursor = resp["cursor"] as number;
+      if (!resp.hasMore) return;
+      cursor = resp.cursor;
     }
   }
 

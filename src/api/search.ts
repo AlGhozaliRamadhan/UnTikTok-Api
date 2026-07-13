@@ -7,6 +7,7 @@ import type { TikTokApi } from "../tiktok";
 import type { User } from "./user";
 import type { Video } from "./video";
 import { InvalidResponseException } from "../exceptions";
+import { searchResponseSchema } from "../schemas";
 
 export class Search {
   /** Static reference to the parent TikTokApi instance */
@@ -87,6 +88,7 @@ export class Search {
         params,
         headers: kwargs.headers,
         sessionIndex: kwargs.sessionIndex,
+        schema: searchResponseSchema,
       });
 
       if (resp == null) {
@@ -94,8 +96,7 @@ export class Search {
       }
 
       if (objType === "user") {
-        const userList = (resp["user_list"] as Record<string, unknown>[]) ?? [];
-        for (const user of userList) {
+        for (const user of resp.user_list) {
           const userInfo = user["user_info"] as Record<string, string>;
           yield this.parent.user({
             secUid: userInfo["sec_uid"],
@@ -105,16 +106,15 @@ export class Search {
           found++;
         }
       } else if (objType === "item") {
-        const itemList = (resp["item_list"] as Record<string, unknown>[]) ?? [];
-        for (const item of itemList) {
+        for (const item of resp.item_list) {
           yield this.parent.video({ data: item });
           found++;
         }
       }
 
-      if (!resp["has_more"]) return;
-      cursor = resp["cursor"] as number;
-      searchId = (resp["rid"] as string) ?? "";
+      if (!resp.hasMore) return;
+      cursor = resp.cursor ?? 0;
+      searchId = resp.rid ?? "";
     }
   }
 }

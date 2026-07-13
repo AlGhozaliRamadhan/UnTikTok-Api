@@ -14,6 +14,7 @@ import {
   InvalidParameterException,
   EmptyResponseException,
 } from "../exceptions";
+import { itemListResponseSchema, commentListResponseSchema } from "../schemas";
 
 export interface VideoOptions {
   id?: string | null;
@@ -374,21 +375,21 @@ export class Video {
         params,
         headers: kwargs.headers,
         sessionIndex: kwargs.sessionIndex,
+        schema: commentListResponseSchema,
       });
 
       if (resp == null) {
         throw new InvalidResponseException(resp, "TikTok returned an invalid response.");
       }
 
-      const comments = (resp["comments"] as Record<string, unknown>[]) ?? [];
-      for (const comment of comments) {
+      for (const comment of resp.comments) {
         yield this.parent.comment({ data: comment });
         found++;
       }
 
       // Python: if not resp.get("has_more", False): return
-      if (!resp["has_more"]) return;
-      cursor = resp["cursor"] as number;
+      if (!resp.hasMore) return;
+      cursor = resp.cursor;
     }
   }
 
@@ -420,14 +421,14 @@ export class Video {
         params,
         headers: kwargs.headers,
         sessionIndex: kwargs.sessionIndex,
+        schema: itemListResponseSchema,
       });
 
       if (resp == null) {
         throw new InvalidResponseException(resp, "TikTok returned an invalid response.");
       }
 
-      const itemList = (resp["itemList"] as Record<string, unknown>[]) ?? [];
-      for (const item of itemList) {
+      for (const item of resp.itemList) {
         yield this.parent.video({ data: item });
         found++;
       }

@@ -7,6 +7,12 @@ import type { TikTokApi } from "../tiktok";
 import type { Video } from "./video";
 import type { Playlist } from "./playlist";
 import { InvalidResponseException, InvalidParameterException } from "../exceptions";
+import {
+  userInfoResponseSchema,
+  itemListResponseSchema,
+  userListResponseSchema,
+  userPlaylistResponseSchema,
+} from "../schemas";
 
 export interface UserOptions {
   username?: string | null;
@@ -189,6 +195,7 @@ export class User {
       params: urlParams,
       headers: kwargs.headers,
       sessionIndex: kwargs.sessionIndex,
+      schema: userInfoResponseSchema,
     });
 
     if (resp == null) {
@@ -232,20 +239,20 @@ export class User {
         params,
         headers: kwargs.headers,
         sessionIndex: kwargs.sessionIndex,
+        schema: userPlaylistResponseSchema,
       });
 
       if (resp == null) {
         throw new InvalidResponseException(resp, "TikTok returned an invalid response.");
       }
 
-      const playList = (resp["playList"] as Record<string, unknown>[]) ?? [];
-      for (const pl of playList) {
+      for (const pl of resp.playList) {
         yield this.parent.playlist({ data: pl });
         found++;
       }
 
-      if (!resp["hasMore"]) return;
-      cursor = resp["cursor"] as number;
+      if (!resp.hasMore) return;
+      cursor = resp.cursor;
     }
   }
 
@@ -281,20 +288,20 @@ export class User {
         params,
         headers: kwargs.headers,
         sessionIndex: kwargs.sessionIndex,
+        schema: itemListResponseSchema,
       });
 
       if (resp == null) {
         throw new InvalidResponseException(resp, "TikTok returned an invalid response.");
       }
 
-      const itemList = (resp["itemList"] as Record<string, unknown>[]) ?? [];
-      for (const item of itemList) {
+      for (const item of resp.itemList) {
         yield this.parent.video({ data: item });
         found++;
       }
 
-      if (!resp["hasMore"]) return;
-      cursor = resp["cursor"] as number;
+      if (!resp.hasMore) return;
+      cursor = resp.cursor;
     }
   }
 
@@ -366,20 +373,20 @@ export class User {
         params,
         headers: kwargs.headers,
         sessionIndex: kwargs.sessionIndex,
+        schema: itemListResponseSchema,
       });
 
       if (resp == null) {
         throw new InvalidResponseException(resp, "TikTok returned an invalid response.");
       }
 
-      const itemList = (resp["itemList"] as Record<string, unknown>[]) ?? [];
-      for (const item of itemList) {
+      for (const item of resp.itemList) {
         yield this.parent.video({ data: item });
         found++;
       }
 
-      if (!resp["hasMore"]) return;
-      cursor = resp["cursor"] as number;
+      if (!resp.hasMore) return;
+      cursor = resp.cursor;
     }
   }
 
@@ -419,20 +426,20 @@ export class User {
         params,
         headers: kwargs.headers,
         sessionIndex: kwargs.sessionIndex,
+        schema: itemListResponseSchema,
       });
 
       if (resp == null) {
         throw new InvalidResponseException(resp, "TikTok returned an invalid response.");
       }
 
-      const itemList = (resp["itemList"] as Record<string, unknown>[]) ?? [];
-      for (const item of itemList) {
+      for (const item of resp.itemList) {
         yield this.parent.video({ data: item });
         found++;
       }
 
-      if (!resp["hasMore"]) return;
-      cursor = resp["cursor"] as number;
+      if (!resp.hasMore) return;
+      cursor = resp.cursor;
     }
   }
 
@@ -469,20 +476,20 @@ export class User {
         params,
         headers: kwargs.headers,
         sessionIndex: kwargs.sessionIndex,
+        schema: itemListResponseSchema,
       });
 
       if (resp == null) {
         throw new InvalidResponseException(resp, "TikTok returned an invalid response.");
       }
 
-      const itemList = (resp["itemList"] as Record<string, unknown>[]) ?? [];
-      for (const item of itemList) {
+      for (const item of resp.itemList) {
         yield this.parent.video({ data: item });
         found++;
       }
 
-      if (!resp["hasMore"]) return;
-      cursor = resp["cursor"] as number;
+      if (!resp.hasMore) return;
+      cursor = resp.cursor;
     }
   }
 
@@ -521,20 +528,20 @@ export class User {
         params,
         headers: kwargs.headers,
         sessionIndex: kwargs.sessionIndex,
+        schema: userListResponseSchema,
       });
 
       if (resp == null) {
         throw new InvalidResponseException(resp, "TikTok returned an invalid response.");
       }
 
-      const userList = (resp["userList"] as Record<string, unknown>[]) ?? [];
-      for (const item of userList) {
+      for (const item of resp.userList) {
         yield this.parent.user({ data: item });
         found++;
       }
 
-      if (!resp["hasMore"]) return;
-      cursor = resp["minCursor"] as number || resp["maxCursor"] as number;
+      if (!resp.hasMore) return;
+      cursor = resp.minCursor || resp.maxCursor;
     }
   }
 
@@ -572,20 +579,20 @@ export class User {
         params,
         headers: kwargs.headers,
         sessionIndex: kwargs.sessionIndex,
+        schema: userListResponseSchema,
       });
 
       if (resp == null) {
         throw new InvalidResponseException(resp, "TikTok returned an invalid response.");
       }
 
-      const userList = (resp["userList"] as Record<string, unknown>[]) ?? [];
-      for (const item of userList) {
+      for (const item of resp.userList) {
         yield this.parent.user({ data: item });
         found++;
       }
 
-      if (!resp["hasMore"]) return;
-      cursor = resp["minCursor"] as number || resp["maxCursor"] as number;
+      if (!resp.hasMore) return;
+      cursor = resp.minCursor || resp.maxCursor;
     }
   }
 

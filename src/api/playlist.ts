@@ -7,6 +7,7 @@ import type { TikTokApi } from "../tiktok";
 import type { Video } from "./video";
 import type { User } from "./user";
 import { InvalidResponseException, InvalidParameterException } from "../exceptions";
+import { playlistDetailResponseSchema, itemListResponseSchema } from "../schemas";
 
 export interface PlaylistOptions {
   id?: string | null;
@@ -74,13 +75,14 @@ export class Playlist {
       params: urlParams,
       headers: kwargs.headers,
       sessionIndex: kwargs.sessionIndex,
+      schema: playlistDetailResponseSchema,
     });
 
     if (resp == null) {
       throw new InvalidResponseException(resp, "TikTok returned an invalid response.");
     }
 
-    this.asDict = resp["mixInfo"] as Record<string, unknown>;
+    this.asDict = resp.mixInfo as Record<string, unknown>;
     this._extractFromData();
     return resp;
   }
@@ -117,20 +119,20 @@ export class Playlist {
         params,
         headers: kwargs.headers,
         sessionIndex: kwargs.sessionIndex,
+        schema: itemListResponseSchema,
       });
 
       if (resp == null) {
         throw new InvalidResponseException(resp, "TikTok returned an invalid response.");
       }
 
-      const itemList = (resp["itemList"] as Record<string, unknown>[]) ?? [];
-      for (const item of itemList) {
+      for (const item of resp.itemList) {
         yield this.parent.video({ data: item });
         found++;
       }
 
-      if (!resp["hasMore"]) return;
-      cursor = resp["cursor"] as number;
+      if (!resp.hasMore) return;
+      cursor = resp.cursor;
     }
   }
 
