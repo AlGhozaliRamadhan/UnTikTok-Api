@@ -8,6 +8,7 @@ import type { Video } from "./video";
 import type { User } from "./user";
 import { InvalidResponseException, InvalidParameterException } from "../exceptions";
 import { playlistDetailResponseSchema, itemListResponseSchema } from "../schemas";
+import { paginate } from "./_paginate";
 
 export interface PlaylistOptions {
   id?: string | null;
@@ -105,35 +106,19 @@ export class Playlist {
     if (!this.id) {
       await this.info(kwargs);
     }
-    let found = 0;
 
-    while (found < count) {
-      const params: Record<string, unknown> = {
-        mixId: this.id,
-        count: Math.min(count, 30),
-        cursor,
-      };
-
-      const resp = await this.parent.makeRequest({
-        url: "https://www.tiktok.com/api/mix/item_list/",
-        params,
-        headers: kwargs.headers,
-        sessionIndex: kwargs.sessionIndex,
-        schema: itemListResponseSchema,
-      });
-
-      if (resp == null) {
-        throw new InvalidResponseException(resp, "TikTok returned an invalid response.");
-      }
-
-      for (const item of resp.itemList) {
-        yield this.parent.video({ data: item });
-        found++;
-      }
-
-      if (!resp.hasMore) return;
-      cursor = resp.cursor;
-    }
+    yield* paginate({
+      parent: this.parent,
+      url: "https://www.tiktok.com/api/mix/item_list/",
+      schema: itemListResponseSchema,
+      buildParams: (c) => ({ mixId: this.id, count: Math.min(count, 30), cursor: c }),
+      getItems: (resp) => resp.itemList,
+      build: (item) => this.parent.video({ data: item }),
+      count,
+      cursor,
+      headers: kwargs.headers,
+      sessionIndex: kwargs.sessionIndex,
+    });
   }
 
   private _extractFromData(): void {

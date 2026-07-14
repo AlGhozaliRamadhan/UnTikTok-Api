@@ -5,8 +5,8 @@
 
 import type { TikTokApi } from "../tiktok";
 import type { User } from "./user";
-import { InvalidResponseException } from "../exceptions";
 import { commentListResponseSchema } from "../schemas";
+import { paginate } from "./_paginate";
 
 export class Comment {
   /** Static reference to the parent TikTokApi instance */
@@ -75,36 +75,23 @@ export class Comment {
     cursor = 0,
     kwargs: { headers?: Record<string, string>; sessionIndex?: number } = {}
   ): AsyncGenerator<Comment> {
-    let found = 0;
-
-    while (found < count) {
-      const params: Record<string, unknown> = {
+    yield* paginate({
+      parent: this.parent,
+      url: "https://www.tiktok.com/api/comment/list/reply/",
+      schema: commentListResponseSchema,
+      buildParams: (c) => ({
         count: 20,
-        cursor,
+        cursor: c,
         item_id: this.author.userId,
         comment_id: this.id,
-      };
-
-      const resp = await this.parent.makeRequest({
-        url: "https://www.tiktok.com/api/comment/list/reply/",
-        params,
-        headers: kwargs.headers,
-        sessionIndex: kwargs.sessionIndex,
-        schema: commentListResponseSchema,
-      });
-
-      if (resp == null) {
-        throw new InvalidResponseException(resp, "TikTok returned an invalid response.");
-      }
-
-      for (const comment of resp.comments) {
-        yield this.parent.comment({ data: comment });
-        found++;
-      }
-
-      if (!resp.hasMore) return;
-      cursor = resp.cursor;
-    }
+      }),
+      getItems: (resp) => resp.comments,
+      build: (comment) => this.parent.comment({ data: comment }),
+      count,
+      cursor,
+      headers: kwargs.headers,
+      sessionIndex: kwargs.sessionIndex,
+    });
   }
 
   toString(): string {

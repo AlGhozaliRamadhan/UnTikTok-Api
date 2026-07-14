@@ -15,6 +15,7 @@ import {
   EmptyResponseException,
 } from "../exceptions";
 import { itemListResponseSchema, commentListResponseSchema } from "../schemas";
+import { paginate } from "./_paginate";
 
 export interface VideoOptions {
   id?: string | null;
@@ -361,36 +362,18 @@ export class Video {
     cursor = 0,
     kwargs: { headers?: Record<string, string>; sessionIndex?: number } = {}
   ): AsyncGenerator<Comment> {
-    let found = 0;
-
-    while (found < count) {
-      const params: Record<string, unknown> = {
-        aweme_id: this.id,
-        count: 20,
-        cursor,
-      };
-
-      const resp = await this.parent.makeRequest({
-        url: "https://www.tiktok.com/api/comment/list/",
-        params,
-        headers: kwargs.headers,
-        sessionIndex: kwargs.sessionIndex,
-        schema: commentListResponseSchema,
-      });
-
-      if (resp == null) {
-        throw new InvalidResponseException(resp, "TikTok returned an invalid response.");
-      }
-
-      for (const comment of resp.comments) {
-        yield this.parent.comment({ data: comment });
-        found++;
-      }
-
-      // Python: if not resp.get("has_more", False): return
-      if (!resp.hasMore) return;
-      cursor = resp.cursor;
-    }
+    yield* paginate({
+      parent: this.parent,
+      url: "https://www.tiktok.com/api/comment/list/",
+      schema: commentListResponseSchema,
+      buildParams: (c) => ({ aweme_id: this.id, count: 20, cursor: c }),
+      getItems: (resp) => resp.comments,
+      build: (comment) => this.parent.comment({ data: comment }),
+      count,
+      cursor,
+      headers: kwargs.headers,
+      sessionIndex: kwargs.sessionIndex,
+    });
   }
 
   /**
@@ -408,34 +391,22 @@ export class Video {
     cursor = 0,
     kwargs: { headers?: Record<string, string>; sessionIndex?: number } = {}
   ): AsyncGenerator<Video> {
-    let found = 0;
-
-    while (found < count) {
-      const params: Record<string, unknown> = {
-        itemID: this.id,
-        count: 16,
-      };
-
-      const resp = await this.parent.makeRequest({
-        url: "https://www.tiktok.com/api/related/item_list/",
-        params,
-        headers: kwargs.headers,
-        sessionIndex: kwargs.sessionIndex,
-        schema: itemListResponseSchema,
-      });
-
-      if (resp == null) {
-        throw new InvalidResponseException(resp, "TikTok returned an invalid response.");
-      }
-
-      for (const item of resp.itemList) {
-        yield this.parent.video({ data: item });
-        found++;
-      }
-      // Note: Python has no hasMore check here — it just loops once.
-      // We match that: break after first page like Python.
-      return;
-    }
+    yield* paginate({
+      parent: this.parent,
+      url: "https://www.tiktok.com/api/related/item_list/",
+      schema: itemListResponseSchema,
+      buildParams: () => ({ itemID: this.id, count: 16 }),
+      getItems: (resp) => resp.itemList,
+      // The related-videos feed only ever gets fetched once by the original
+      // client regardless of what `hasMore` says — preserve that single-page
+      // behaviour explicitly instead of trusting the flag.
+      getHasMore: () => false,
+      build: (item) => this.parent.video({ data: item }),
+      count,
+      cursor,
+      headers: kwargs.headers,
+      sessionIndex: kwargs.sessionIndex,
+    });
   }
 
   private _extractFromData(): void {

@@ -5,8 +5,8 @@
 
 import type { TikTokApi } from "../tiktok";
 import type { Video } from "./video";
-import { InvalidResponseException } from "../exceptions";
 import { trendingFeedResponseSchema } from "../schemas";
+import { paginate } from "./_paginate";
 
 export class Trending {
   /** Static reference to the parent TikTokApi instance */
@@ -29,36 +29,25 @@ export class Trending {
    */
   async *videos(
     count = 30,
+    cursor = 0,
     kwargs: { headers?: Record<string, string>; sessionIndex?: number } = {}
   ): AsyncGenerator<Video> {
-    let found = 0;
-
-    while (found < count) {
-      const batchSize = Math.min(count - found, 30);
-      const params: Record<string, unknown> = {
+    yield* paginate({
+      parent: this.parent,
+      url: "https://www.tiktok.com/api/recommend/item_list/",
+      schema: trendingFeedResponseSchema,
+      // Trending has no real cursor of its own — TikTok just wants a fresh
+      // batch size each call. Size the request to what's still needed.
+      buildParams: (_c, found) => ({
         from_page: "fyp",
-        count: batchSize,
-      };
-
-      const resp = await this.parent.makeRequest({
-        url: "https://www.tiktok.com/api/recommend/item_list/",
-        params,
-        headers: kwargs.headers,
-        sessionIndex: kwargs.sessionIndex,
-        schema: trendingFeedResponseSchema,
-      });
-
-      if (resp == null) {
-        throw new InvalidResponseException(resp, "TikTok returned an invalid response.");
-      }
-
-      if (resp.itemList.length === 0) return; // If no items returned, stop to avoid infinite loop
-      for (const item of resp.itemList) {
-        yield this.parent.video({ data: item });
-        found++;
-      }
-
-      if (!resp.hasMore) return;
-    }
+        count: Math.min(count - found, 30),
+      }),
+      getItems: (resp) => resp.itemList,
+      build: (item) => this.parent.video({ data: item }),
+      count,
+      cursor,
+      headers: kwargs.headers,
+      sessionIndex: kwargs.sessionIndex,
+    });
   }
 }

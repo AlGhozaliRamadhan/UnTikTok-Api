@@ -6,8 +6,8 @@
 import type { TikTokApi } from "../tiktok";
 import type { User } from "./user";
 import type { Video } from "./video";
-import { InvalidResponseException } from "../exceptions";
 import { searchResponseSchema } from "../schemas";
+import { paginate } from "./_paginate";
 
 export class Search {
   /** Static reference to the parent TikTokApi instance */
@@ -58,63 +58,55 @@ export class Search {
     cursor = 0,
     kwargs: { headers?: Record<string, string>; sessionIndex?: number } = {}
   ): AsyncGenerator<User | Video> {
-    let found = 0;
+    // TikTok rotates a `search_id` (from the previous page's `rid`) into
+    // subsequent requests. `paginate()`'s `onPage` hook lets us thread that
+    // extra bit of per-page state into the next `buildParams` call via this
+    // closure variable, without the helper needing to know search is special.
     let searchId = "";
 
-    while (found < count) {
-      const params: Record<string, unknown> = {
-        keyword: searchTerm,
-        cursor,
-        from_page: "search",
-        web_search_code: JSON.stringify({
-          tiktok: {
-            client_params_x: {
-              search_engine: {
-                ies_mt_user_live_video_card_use_libra: 1,
-                mt_search_general_user_live_card: 1,
+    yield* paginate({
+      parent: this.parent,
+      url: `https://www.tiktok.com/api/search/${objType}/full/`,
+      schema: searchResponseSchema,
+      buildParams: (c) => {
+        const params: Record<string, unknown> = {
+          keyword: searchTerm,
+          cursor: c,
+          from_page: "search",
+          web_search_code: JSON.stringify({
+            tiktok: {
+              client_params_x: {
+                search_engine: {
+                  ies_mt_user_live_video_card_use_libra: 1,
+                  mt_search_general_user_live_card: 1,
+                },
               },
+              search_server: {},
             },
-            search_server: {},
-          },
-        }),
-      };
-
-      if (searchId) {
-        params["search_id"] = searchId;
-      }
-
-      const resp = await this.parent.makeRequest({
-        url: `https://www.tiktok.com/api/search/${objType}/full/`,
-        params,
-        headers: kwargs.headers,
-        sessionIndex: kwargs.sessionIndex,
-        schema: searchResponseSchema,
-      });
-
-      if (resp == null) {
-        throw new InvalidResponseException(resp, "TikTok returned an invalid response.");
-      }
-
-      if (objType === "user") {
-        for (const user of resp.user_list) {
-          const userInfo = user["user_info"] as Record<string, string>;
-          yield this.parent.user({
+          }),
+        };
+        if (searchId) params["search_id"] = searchId;
+        return params;
+      },
+      getItems: (resp) => (objType === "user" ? resp.user_list : resp.item_list),
+      onPage: (resp) => {
+        searchId = resp.rid ?? "";
+      },
+      build: (raw) => {
+        if (objType === "user") {
+          const userInfo = raw["user_info"] as Record<string, string>;
+          return this.parent.user({
             secUid: userInfo["sec_uid"],
             userId: userInfo["user_id"],
             username: userInfo["unique_id"],
           });
-          found++;
         }
-      } else if (objType === "item") {
-        for (const item of resp.item_list) {
-          yield this.parent.video({ data: item });
-          found++;
-        }
-      }
-
-      if (!resp.hasMore) return;
-      cursor = resp.cursor ?? 0;
-      searchId = resp.rid ?? "";
-    }
+        return this.parent.video({ data: raw });
+      },
+      count,
+      cursor,
+      headers: kwargs.headers,
+      sessionIndex: kwargs.sessionIndex,
+    });
   }
 }

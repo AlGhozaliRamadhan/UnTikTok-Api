@@ -13,6 +13,7 @@ import {
   userListResponseSchema,
   userPlaylistResponseSchema,
 } from "../schemas";
+import { paginate } from "./_paginate";
 
 export interface UserOptions {
   username?: string | null;
@@ -225,35 +226,19 @@ export class User {
     if (!this.secUid) {
       await this.info(kwargs);
     }
-    let found = 0;
 
-    while (found < count) {
-      const params: Record<string, unknown> = {
-        secUid: this.secUid,
-        count: Math.min(count, 30),
-        cursor,
-      };
-
-      const resp = await this.parent.makeRequest({
-        url: "https://www.tiktok.com/api/user/playlist",
-        params,
-        headers: kwargs.headers,
-        sessionIndex: kwargs.sessionIndex,
-        schema: userPlaylistResponseSchema,
-      });
-
-      if (resp == null) {
-        throw new InvalidResponseException(resp, "TikTok returned an invalid response.");
-      }
-
-      for (const pl of resp.playList) {
-        yield this.parent.playlist({ data: pl });
-        found++;
-      }
-
-      if (!resp.hasMore) return;
-      cursor = resp.cursor;
-    }
+    yield* paginate({
+      parent: this.parent,
+      url: "https://www.tiktok.com/api/user/playlist",
+      schema: userPlaylistResponseSchema,
+      buildParams: (c) => ({ secUid: this.secUid, count: Math.min(count, 30), cursor: c }),
+      getItems: (resp) => resp.playList,
+      build: (pl) => this.parent.playlist({ data: pl }),
+      count,
+      cursor,
+      headers: kwargs.headers,
+      sessionIndex: kwargs.sessionIndex,
+    });
   }
 
   /**
@@ -274,35 +259,19 @@ export class User {
     if (!this.secUid) {
       await this.info(kwargs);
     }
-    let found = 0;
 
-    while (found < count) {
-      const params: Record<string, unknown> = {
-        secUid: this.secUid,
-        count: 30,
-        cursor,
-      };
-
-      const resp = await this.parent.makeRequest({
-        url: "https://www.tiktok.com/api/post/item_list/",
-        params,
-        headers: kwargs.headers,
-        sessionIndex: kwargs.sessionIndex,
-        schema: itemListResponseSchema,
-      });
-
-      if (resp == null) {
-        throw new InvalidResponseException(resp, "TikTok returned an invalid response.");
-      }
-
-      for (const item of resp.itemList) {
-        yield this.parent.video({ data: item });
-        found++;
-      }
-
-      if (!resp.hasMore) return;
-      cursor = resp.cursor;
-    }
+    yield* paginate({
+      parent: this.parent,
+      url: "https://www.tiktok.com/api/post/item_list/",
+      schema: itemListResponseSchema,
+      buildParams: (c) => ({ secUid: this.secUid, count: 30, cursor: c }),
+      getItems: (resp) => resp.itemList,
+      build: (item) => this.parent.video({ data: item }),
+      count,
+      cursor,
+      headers: kwargs.headers,
+      sessionIndex: kwargs.sessionIndex,
+    });
   }
 
   /**
@@ -359,35 +328,19 @@ export class User {
     if (!this.secUid) {
       await this.info(kwargs);
     }
-    let found = 0;
 
-    while (found < count) {
-      const params: Record<string, unknown> = {
-        secUid: this.secUid,
-        count: 30,
-        cursor,
-      };
-
-      const resp = await this.parent.makeRequest({
-        url: "https://www.tiktok.com/api/favorite/item_list",
-        params,
-        headers: kwargs.headers,
-        sessionIndex: kwargs.sessionIndex,
-        schema: itemListResponseSchema,
-      });
-
-      if (resp == null) {
-        throw new InvalidResponseException(resp, "TikTok returned an invalid response.");
-      }
-
-      for (const item of resp.itemList) {
-        yield this.parent.video({ data: item });
-        found++;
-      }
-
-      if (!resp.hasMore) return;
-      cursor = resp.cursor;
-    }
+    yield* paginate({
+      parent: this.parent,
+      url: "https://www.tiktok.com/api/favorite/item_list",
+      schema: itemListResponseSchema,
+      buildParams: (c) => ({ secUid: this.secUid, count: 30, cursor: c }),
+      getItems: (resp) => resp.itemList,
+      build: (item) => this.parent.video({ data: item }),
+      count,
+      cursor,
+      headers: kwargs.headers,
+      sessionIndex: kwargs.sessionIndex,
+    });
   }
 
   /**
@@ -411,36 +364,19 @@ export class User {
     }
 
     // "well now you can stalk your crush repost without knowing" - Al Ghozali Ramadhan
-    
-    let found = 0;
 
-    while (found < count) {
-      const params: Record<string, unknown> = {
-        secUid: this.secUid,
-        count: 30,
-        cursor,
-      };
-
-      const resp = await this.parent.makeRequest({
-        url: "https://www.tiktok.com/api/repost/item_list/",
-        params,
-        headers: kwargs.headers,
-        sessionIndex: kwargs.sessionIndex,
-        schema: itemListResponseSchema,
-      });
-
-      if (resp == null) {
-        throw new InvalidResponseException(resp, "TikTok returned an invalid response.");
-      }
-
-      for (const item of resp.itemList) {
-        yield this.parent.video({ data: item });
-        found++;
-      }
-
-      if (!resp.hasMore) return;
-      cursor = resp.cursor;
-    }
+    yield* paginate({
+      parent: this.parent,
+      url: "https://www.tiktok.com/api/repost/item_list/",
+      schema: itemListResponseSchema,
+      buildParams: (c) => ({ secUid: this.secUid, count: 30, cursor: c }),
+      getItems: (resp) => resp.itemList,
+      build: (item) => this.parent.video({ data: item }),
+      count,
+      cursor,
+      headers: kwargs.headers,
+      sessionIndex: kwargs.sessionIndex,
+    });
   }
 
   /**
@@ -462,35 +398,19 @@ export class User {
     if (!this.secUid) {
       await this.info(kwargs);
     }
-    let found = 0;
 
-    while (found < count) {
-      const params: Record<string, unknown> = {
-        secUid: this.secUid,
-        count: 30,
-        cursor,
-      };
-
-      const resp = await this.parent.makeRequest({
-        url: "https://www.tiktok.com/api/user/collect/item_list/",
-        params,
-        headers: kwargs.headers,
-        sessionIndex: kwargs.sessionIndex,
-        schema: itemListResponseSchema,
-      });
-
-      if (resp == null) {
-        throw new InvalidResponseException(resp, "TikTok returned an invalid response.");
-      }
-
-      for (const item of resp.itemList) {
-        yield this.parent.video({ data: item });
-        found++;
-      }
-
-      if (!resp.hasMore) return;
-      cursor = resp.cursor;
-    }
+    yield* paginate({
+      parent: this.parent,
+      url: "https://www.tiktok.com/api/user/collect/item_list/",
+      schema: itemListResponseSchema,
+      buildParams: (c) => ({ secUid: this.secUid, count: 30, cursor: c }),
+      getItems: (resp) => resp.itemList,
+      build: (item) => this.parent.video({ data: item }),
+      count,
+      cursor,
+      headers: kwargs.headers,
+      sessionIndex: kwargs.sessionIndex,
+    });
   }
 
   /**
@@ -513,36 +433,20 @@ export class User {
     if (!this.secUid) {
       await this.info(kwargs);
     }
-    let found = 0;
 
-    while (found < count) {
-      const params: Record<string, unknown> = {
-        secUid: this.secUid,
-        count: 30,
-        minCursor: cursor,
-        maxCursor: cursor,
-      };
-
-      const resp = await this.parent.makeRequest({
-        url: "https://www.tiktok.com/api/user/list/",
-        params,
-        headers: kwargs.headers,
-        sessionIndex: kwargs.sessionIndex,
-        schema: userListResponseSchema,
-      });
-
-      if (resp == null) {
-        throw new InvalidResponseException(resp, "TikTok returned an invalid response.");
-      }
-
-      for (const item of resp.userList) {
-        yield this.parent.user({ data: item });
-        found++;
-      }
-
-      if (!resp.hasMore) return;
-      cursor = resp.minCursor || resp.maxCursor;
-    }
+    yield* paginate({
+      parent: this.parent,
+      url: "https://www.tiktok.com/api/user/list/",
+      schema: userListResponseSchema,
+      buildParams: (c) => ({ secUid: this.secUid, count: 30, minCursor: c, maxCursor: c }),
+      getItems: (resp) => resp.userList,
+      getCursor: (resp) => resp.minCursor || resp.maxCursor,
+      build: (item) => this.parent.user({ data: item }),
+      count,
+      cursor,
+      headers: kwargs.headers,
+      sessionIndex: kwargs.sessionIndex,
+    });
   }
 
   /**
@@ -564,36 +468,20 @@ export class User {
     if (!this.secUid) {
       await this.info(kwargs);
     }
-    let found = 0;
 
-    while (found < count) {
-      const params: Record<string, unknown> = {
-        secUid: this.secUid,
-        count: 30,
-        minCursor: cursor,
-        maxCursor: cursor,
-      };
-
-      const resp = await this.parent.makeRequest({
-        url: "https://www.tiktok.com/api/user/following/",
-        params,
-        headers: kwargs.headers,
-        sessionIndex: kwargs.sessionIndex,
-        schema: userListResponseSchema,
-      });
-
-      if (resp == null) {
-        throw new InvalidResponseException(resp, "TikTok returned an invalid response.");
-      }
-
-      for (const item of resp.userList) {
-        yield this.parent.user({ data: item });
-        found++;
-      }
-
-      if (!resp.hasMore) return;
-      cursor = resp.minCursor || resp.maxCursor;
-    }
+    yield* paginate({
+      parent: this.parent,
+      url: "https://www.tiktok.com/api/user/following/",
+      schema: userListResponseSchema,
+      buildParams: (c) => ({ secUid: this.secUid, count: 30, minCursor: c, maxCursor: c }),
+      getItems: (resp) => resp.userList,
+      getCursor: (resp) => resp.minCursor || resp.maxCursor,
+      build: (item) => this.parent.user({ data: item }),
+      count,
+      cursor,
+      headers: kwargs.headers,
+      sessionIndex: kwargs.sessionIndex,
+    });
   }
 
   private _extractFromData(): void {
