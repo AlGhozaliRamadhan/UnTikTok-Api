@@ -74,17 +74,18 @@ This skill teaches you the core development patterns and conventions used in the
 **Trigger:** When the user wants to publish a new version to NPM  
 **Command:** `/release`
 
-> **Important:** Publishing to NPM is NEVER done by running `npm publish` locally. This project uses a GitHub Actions workflow (`.github/workflows/publish.yml`) that publishes to NPM automatically when a GitHub Release is published. Locally running `npm publish` must be avoided.
+> **Hard boundary — see `AGENTS.md` §Publishing (authoritative):** Publishing to NPM is NEVER done by running `npm publish` locally, and creating the GitHub Release itself is **out of scope for the agent, with no exception** — not even on an explicit "release it" request. This project ships via a GitHub Actions workflow (`.github/workflows/publish.yml`) that publishes to NPM automatically when a human publishes a GitHub Release. The agent's job stops one step before that trigger.
 
-1. Read `package.json` to verify the current `version` matches what the user wants to release.
-2. If there is an ongoing release flow that already updated `package.json`, verify that the working tree has been committed and pushed to `main`. If not, commit and push the changes first.
-3. Create a GitHub Release tagged with the version from `package.json` using:
+1. Read `package.json` to verify/set the `version` the user wants to release. Bumping the version file itself is fine with an explicit request.
+2. Run the full check sequence first: `npm run check:playwright-version && npm run lint && npm run typecheck && npm run build && npm run test:run`. Do not proceed to commit if any of these fail.
+3. If there is an ongoing release flow that updated `package.json` and other files, commit and push to `main` **once the user has explicitly asked for that git action** (see `AGENTS.md` §"Git push policy" — commit and push each need their own explicit request; do not infer them from "release it" alone).
+4. **Stop here.** Do not run `gh release create`, `gh release publish`, `npm publish`, `npm login`, or `npm whoami`. Instead, hand the user the exact command to run themselves:
    ```bash
-   gh release create v<version> --title "<version>" --notes "Release <version>"
+   gh release create v<version> --title "v<version>" --notes "<short summary of what changed>"
    ```
-   - Example: for `package.json` version `1.0.7`, run `gh release create v1.0.7 --title "1.0.7" --notes "Release 1.0.7"`.
-4. That release event triggers `.github/workflows/publish.yml`, which builds the project and publishes the package to NPM with provenance.
-5. Do NOT run `npm login`, `npm whoami`, or `npm publish` locally. If the user asks for a direct local publish, remind them that this project is configured to ship via GitHub Releases and offer to create the release instead.
+   - Example: for `package.json` version `1.2.0`, give them `gh release create v1.2.0 --title "v1.2.0" --notes "..."`.
+   - Also mention the GitHub UI path (Releases → Draft a new release → tag matching `package.json` → Publish) as the no-CLI alternative.
+5. Explain that once *they* publish the release, `.github/workflows/publish.yml` fires automatically and does the actual `npm publish --provenance --access public` — the agent does not need to (and must not) trigger that step directly, regardless of how directly the user asks.
 
 ## Testing Patterns
 
