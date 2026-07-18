@@ -143,6 +143,7 @@ state.json
 # Architecture decision records are a working scratchpad, not a published asset.
 docs/decisions/
 # Agent-config / skill folders belong to the developer's local toolchain.
+AGENTS.md
 .claude/
 .codex/
 .agents/

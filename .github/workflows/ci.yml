@@ -33,6 +33,13 @@ jobs:
     - name: Check Playwright version alignment (ADR-004)
       run: npm run check:playwright-version
 
+    - name: Check npm version drift (informational)
+      run: npm run check:npm-version
+      continue-on-error: true
+      env:
+        # Force-enable even under CI; CI auto-disable is for *users*, not maintainers.
+        CI: ''
+
     - name: Lint
       run: npm run lint
 

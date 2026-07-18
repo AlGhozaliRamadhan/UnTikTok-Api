@@ -120,6 +120,7 @@ describe("checkForUpdate", () => {
   });
 
   it("returns info when local < latest", async () => {
+    delete process.env.CI;
     globalThis.fetch = vi.fn(async () =>
       new Response(JSON.stringify({ version: "2.0.0" }), { status: 200 }),
     ) as unknown as typeof fetch;
