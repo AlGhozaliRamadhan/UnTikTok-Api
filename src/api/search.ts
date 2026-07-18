@@ -93,15 +93,16 @@ export class Search {
         searchId = resp.rid ?? "";
       },
       build: (raw) => {
+        const r = raw as Record<string, unknown>;
         if (objType === "user") {
-          const userInfo = raw["user_info"] as Record<string, string>;
+          const userInfo = r["user_info"] as Record<string, string>;
           return this.parent.user({
             secUid: userInfo["sec_uid"],
             userId: userInfo["user_id"],
             username: userInfo["unique_id"],
           });
         }
-        return this.parent.video({ data: raw });
+        return this.parent.video({ data: r });
       },
       count,
       cursor,

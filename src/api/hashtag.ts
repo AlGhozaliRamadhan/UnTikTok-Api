@@ -10,9 +10,9 @@ import { hashtagDetailResponseSchema, itemListResponseSchema } from "../schemas"
 import { paginate } from "./_paginate";
 
 export interface HashtagOptions {
-  name?: string | null;
-  id?: string | null;
-  data?: Record<string, unknown> | null;
+  name?: string | null | undefined;
+  id?: string | null | undefined;
+  data?: Record<string, unknown> | null | undefined;
 }
 
 export class Hashtag {
@@ -20,13 +20,13 @@ export class Hashtag {
   parent: TikTokApi;
 
   /** The ID of the hashtag */
-  id?: string;
-  /** The name of the hashtag (without #) */
-  name?: string;
+  id?: string | undefined;
+  /** The name of the hashtag */
+  name?: string | undefined;
   /** The raw data associated with this hashtag */
   asDict?: Record<string, unknown>;
   /** Additional split name if available */
-  splitName?: string;
+  splitName?: string | undefined;
   /** Stats if available */
   stats?: Record<string, unknown>;
 

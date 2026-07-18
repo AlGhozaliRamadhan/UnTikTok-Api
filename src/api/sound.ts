@@ -11,8 +11,8 @@ import { soundDetailResponseSchema, itemListResponseSchema } from "../schemas";
 import { paginate } from "./_paginate";
 
 export interface SoundOptions {
-  id?: string | null;
-  data?: Record<string, unknown> | null;
+  id?: string | null | undefined;
+  data?: Record<string, unknown> | null | undefined;
 }
 
 export class Sound {

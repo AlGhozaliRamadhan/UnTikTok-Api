@@ -11,8 +11,8 @@ import type { BrowserContext, Page } from "playwright";
 export interface ProxySettings {
   server: string;
   bypass?: string;
-  username?: string;
-  password?: string;
+  username?: string | undefined;
+  password?: string | undefined;
 }
 
 // ---------------------------------------------------------------------------
@@ -21,10 +21,10 @@ export interface ProxySettings {
 export interface TikTokPlaywrightSession {
   context: BrowserContext;
   page: Page;
-  proxy?: ProxySettings | string | null;
-  params?: Record<string, string> | null;
-  headers?: Record<string, string> | null;
-  msToken?: string | null;
+  proxy?: ProxySettings | string | null | undefined;
+  params?: Record<string, string> | null | undefined;
+  headers?: Record<string, string> | null | undefined;
+  msToken?: string | null | undefined;
   baseUrl: string;
   isValid: boolean;
 }
@@ -33,25 +33,25 @@ export interface TikTokPlaywrightSession {
 // create_sessions() options
 // ---------------------------------------------------------------------------
 export interface CreateSessionsOptions {
-  numSessions?: number;
-  headless?: boolean;
-  msTokens?: string[] | null;
+  numSessions?: number | undefined;
+  headless?: boolean | undefined;
+  msTokens?: string[] | null | undefined;
   /** @deprecated Use proxyProvider instead */
-  proxies?: (ProxySettings | string)[] | null;
-  sleepAfter?: number;
-  startingUrl?: string;
-  contextOptions?: Record<string, unknown>;
-  overrideBrowserArgs?: string[] | null;
-  cookies?: Record<string, string>[] | null;
-  suppressResourceLoadTypes?: string[] | null;
-  browser?: "chromium" | "firefox" | "webkit";
-  executablePath?: string | null;
-  pageFactory?: ((context: BrowserContext) => Promise<Page>) | null;
-  browserContextFactory?: ((playwright: unknown) => Promise<BrowserContext>) | null;
-  timeout?: number;
-  enableSessionRecovery?: boolean;
-  allowPartialSessions?: boolean;
-  minSessions?: number | null;
+  proxies?: (ProxySettings | string)[] | null | undefined;
+  sleepAfter?: number | undefined;
+  startingUrl?: string | undefined;
+  contextOptions?: Record<string, unknown> | undefined;
+  overrideBrowserArgs?: string[] | null | undefined;
+  cookies?: Record<string, string>[] | null | undefined;
+  suppressResourceLoadTypes?: string[] | null | undefined;
+  browser?: "chromium" | "firefox" | "webkit" | undefined;
+  executablePath?: string | null | undefined;
+  pageFactory?: ((context: BrowserContext) => Promise<Page>) | null | undefined;
+  browserContextFactory?: ((playwright: unknown) => Promise<BrowserContext>) | null | undefined;
+  timeout?: number | undefined;
+  enableSessionRecovery?: boolean | undefined;
+  allowPartialSessions?: boolean | undefined;
+  minSessions?: number | null | undefined;
 }
 
 // ---------------------------------------------------------------------------

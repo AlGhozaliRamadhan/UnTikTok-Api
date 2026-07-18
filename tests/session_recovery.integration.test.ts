@@ -13,7 +13,7 @@ describe.skipIf(!process.env.CI_NETWORK)("integration: session recovery + health
     const api = new TikTokApi();
     try {
       await api.createSessions({
-        msTokens: msToken ? [msToken] : undefined,
+        msTokens: msToken ? [msToken] : null,
         numSessions: 2,
         sleepAfter: 3,
         headless,
@@ -38,7 +38,7 @@ describe.skipIf(!process.env.CI_NETWORK)("integration: session recovery + health
     const api = new TikTokApi();
     try {
       await api.createSessions({
-        msTokens: msToken ? [msToken] : undefined,
+        msTokens: msToken ? [msToken] : null,
         numSessions: 1,
         sleepAfter: 3,
         headless,
@@ -56,7 +56,7 @@ describe.skipIf(!process.env.CI_NETWORK)("integration: session recovery + health
     const api = new TikTokApi();
     try {
       await api.createSessions({
-        msTokens: msToken ? [msToken] : undefined,
+        msTokens: msToken ? [msToken] : null,
         numSessions: 2,
         sleepAfter: 1,
         headless,
@@ -75,7 +75,7 @@ describe.skipIf(!process.env.CI_NETWORK)("integration: session recovery + health
     const api = new TikTokApi();
     try {
       await api.createSessions({
-        msTokens: msToken ? [msToken] : undefined,
+        msTokens: msToken ? [msToken] : null,
         numSessions: 1,
         sleepAfter: 3,
         headless,

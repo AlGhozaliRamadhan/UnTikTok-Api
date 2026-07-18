@@ -14,7 +14,7 @@ describe.skipIf(!process.env.CI_NETWORK)("integration: hashtag.info + hashtag.vi
     const api = new TikTokApi();
     try {
       await api.createSessions({
-        msTokens: msToken ? [msToken] : undefined,
+        msTokens: msToken ? [msToken] : null,
         numSessions: 1,
         sleepAfter: 3,
         browser,

@@ -11,7 +11,7 @@ import {
 import { randomInt } from "crypto";
 import { URL } from "url";
 
-import type { TikTokPlaywrightSession, CreateSessionsOptions, ResourceStats, HealthCheckResult } from "./types";
+import type { TikTokPlaywrightSession, CreateSessionsOptions, ResourceStats, HealthCheckResult, ProxySettings } from "./types";
 import {
   EmptyResponseException,
   InvalidJSONException,
@@ -69,18 +69,12 @@ export class Logger {
 // ---------------------------------------------------------------------------
 export interface MakeRequestOptions {
   url: string;
-  headers?: Record<string, string> | null;
-  params?: Record<string, unknown> | null;
+  headers?: Record<string, string> | null | undefined;
+  params?: Record<string, unknown> | null | undefined;
   retries?: number;
   exponentialBackoff?: boolean;
-  sessionIndex?: number;
-  /**
-   * Optional zod schema validating the response shape at the boundary
-   * (ADR-007). When provided, `makeRequest` parses the JSON through the schema
-   * and returns the narrowed/normalized type; a shape mismatch throws
-   * `InvalidResponseException` wrapping the zod issues.
-   */
-  schema?: z.ZodType;
+  sessionIndex?: number | undefined;
+  schema?: z.ZodType | undefined;
 }
 
 // ---------------------------------------------------------------------------
@@ -225,7 +219,7 @@ export class TikTokApi {
     }
   }
 
-  async _getValidSessionIndex(kwargs: { sessionIndex?: number } = {}): Promise<[number, TikTokPlaywrightSession]> {
+  async _getValidSessionIndex(kwargs: { sessionIndex?: number | undefined } = {}): Promise<[number, TikTokPlaywrightSession]> {
     const maxAttempts = 3;
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
@@ -283,7 +277,7 @@ export class TikTokApi {
 
   // ── _getSession (deprecated but kept for compat) ──
 
-  _getSession(kwargs: { sessionIndex?: number } = {}): [number, TikTokPlaywrightSession] {
+  _getSession(kwargs: { sessionIndex?: number | undefined } = {}): [number, TikTokPlaywrightSession] {
     if (this.sessions.length === 0) {
       throw new SessionUnavailableException(null, "No sessions created, please create sessions first");
     }
@@ -329,33 +323,24 @@ export class TikTokApi {
       this.browser = factoryResult as unknown as Browser;
     } else {
       let launchArgs = overrideBrowserArgs ?? undefined;
-      let finalHeadless = headless;
+
+      const pwProxy = proxyToPlaywright(randomChoice(proxies));
+      const launchOpts: Record<string, unknown> = { headless };
+      if (launchArgs != null) launchOpts.args = launchArgs;
+      if (pwProxy != null) launchOpts.proxy = pwProxy;
+      if (executablePath != null) launchOpts.executablePath = executablePath;
 
       if (browserName === "chromium") {
         if (headless && !overrideBrowserArgs) {
           launchArgs = ["--headless=new"];
-          finalHeadless = false;
+          launchOpts.args = launchArgs;
+          launchOpts.headless = false;
         }
-        this.browser = await pw_chromium.launch({
-          headless: finalHeadless,
-          args: launchArgs,
-          proxy: proxyToPlaywright(randomChoice(proxies)),
-          executablePath: executablePath ?? undefined,
-        });
+        this.browser = await pw_chromium.launch(launchOpts as any);
       } else if (browserName === "firefox") {
-        this.browser = await pw_firefox.launch({
-          headless: finalHeadless,
-          args: launchArgs,
-          proxy: proxyToPlaywright(randomChoice(proxies)),
-          executablePath: executablePath ?? undefined,
-        });
+        this.browser = await pw_firefox.launch(launchOpts as any);
       } else if (browserName === "webkit") {
-        this.browser = await pw_webkit.launch({
-          headless: finalHeadless,
-          args: launchArgs,
-          proxy: proxyToPlaywright(randomChoice(proxies)),
-          executablePath: executablePath ?? undefined,
-        });
+        this.browser = await pw_webkit.launch(launchOpts as any);
       } else {
         throw new InvalidParameterException(
           null,
@@ -423,16 +408,16 @@ export class TikTokApi {
   }
 
   private async _createSession(options: {
-    url?: string;
-    msToken?: string | null;
+    url?: string | undefined;
+    msToken?: string | null | undefined;
     proxy?: unknown;
-    contextOptions?: Record<string, unknown>;
-    sleepAfter?: number;
-    cookies?: Record<string, string> | null;
-    suppressResourceLoadTypes?: string[] | null;
-    timeout?: number;
-    pageFactory?: ((ctx: BrowserContext) => Promise<Page>) | null;
-    browserContextFactory?: ((pw: unknown) => Promise<BrowserContext>) | null;
+    contextOptions?: Record<string, unknown> | undefined;
+    sleepAfter?: number | undefined;
+    cookies?: Record<string, string> | null | undefined;
+    suppressResourceLoadTypes?: string[] | null | undefined;
+    timeout?: number | undefined;
+    pageFactory?: ((ctx: BrowserContext) => Promise<Page>) | null | undefined;
+    browserContextFactory?: ((pw: unknown) => Promise<BrowserContext>) | null | undefined;
   }): Promise<void> {
     const {
       url = "https://www.tiktok.com",
@@ -459,11 +444,10 @@ export class TikTokApi {
       if (!defaultUA) {
         defaultUA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
       }
-      context = await this.browser!.newContext({
-        proxy: proxyToPlaywright(proxy),
-        userAgent: defaultUA,
-        ...contextOptions,
-      });
+      const ctxOpts: Record<string, unknown> = { userAgent: defaultUA, ...contextOptions };
+      const pwProxyOpt = proxyToPlaywright(proxy);
+      if (pwProxyOpt) ctxOpts.proxy = pwProxyOpt;
+      context = await this.browser!.newContext(ctxOpts as any);
 
       if (cookies) {
         const hostname = new URL(url).hostname;
@@ -530,8 +514,8 @@ export class TikTokApi {
       const session: TikTokPlaywrightSession = {
         context,
         page,
-        msToken,
-        proxy: proxy as string | undefined,
+        msToken: msToken ?? null,
+        proxy: (proxy ?? null) as string | ProxySettings | null | undefined,
         headers: requestHeaders,
         baseUrl: url,
         isValid: true,
@@ -962,8 +946,8 @@ function proxyToPlaywright(
     const p = proxy as Record<string, string>;
     return {
       server: p["server"] ?? p["http"] ?? p["https"] ?? "",
-      username: p["username"],
-      password: p["password"],
+      ...(p["username"] !== undefined ? { username: p["username"] } : {}),
+      ...(p["password"] !== undefined ? { password: p["password"] } : {}),
     };
   }
   return undefined;

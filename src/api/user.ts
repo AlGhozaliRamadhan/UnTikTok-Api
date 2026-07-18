@@ -16,10 +16,10 @@ import {
 import { paginate } from "./_paginate";
 
 export interface UserOptions {
-  username?: string | null;
-  userId?: string | null;
-  secUid?: string | null;
-  data?: Record<string, unknown> | null;
+  username?: string | null | undefined;
+  userId?: string | null | undefined;
+  secUid?: string | null | undefined;
+  data?: Record<string, unknown> | null | undefined;
 }
 
 export class User {

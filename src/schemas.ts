@@ -42,8 +42,8 @@ const paginationFlagSchema = z.boolean().optional();
 
 /** Coalesce `hasMore`/`has_more` into a single boolean (false when absent). */
 function normalizeHasMore(d: {
-  hasMore?: boolean;
-  has_more?: boolean;
+  hasMore?: boolean | undefined;
+  has_more?: boolean | undefined;
 }): boolean {
   return d.hasMore ?? d.has_more ?? false;
 }

@@ -18,11 +18,11 @@ import { itemListResponseSchema, commentListResponseSchema } from "../schemas";
 import { paginate } from "./_paginate";
 
 export interface VideoOptions {
-  id?: string | null;
-  url?: string | null;
-  data?: Record<string, unknown> | null;
-  sessionIndex?: number;
-  proxy?: string | null;
+  id?: string | null | undefined;
+  url?: string | null | undefined;
+  data?: Record<string, unknown> | null | undefined;
+  sessionIndex?: number | undefined;
+  proxy?: string | null | undefined;
 }
 
 export class Video {
@@ -30,13 +30,13 @@ export class Video {
   parent: TikTokApi;
 
   /** TikTok's ID of the Video */
-  id?: string;
+  id?: string | undefined;
   /** The URL of the Video */
-  url?: string;
+  url?: string | undefined;
   /** The creation time of the Video */
   createTime?: Date;
   /** TikTok's stats for the Video */
-  stats?: Record<string, unknown>;
+  stats?: Record<string, unknown> | undefined;
   /** The User who created the Video */
   author?: User;
   /** The Sound associated with the Video */

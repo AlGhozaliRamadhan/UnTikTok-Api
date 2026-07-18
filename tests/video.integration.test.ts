@@ -14,7 +14,7 @@ describe.skipIf(!process.env.CI_NETWORK)("integration: video.info + comments + r
     const api = new TikTokApi({ loggingLevel: "debug" });
     try {
       await api.createSessions({
-        msTokens: msToken ? [msToken] : undefined,
+        msTokens: msToken ? [msToken] : null,
         numSessions: 1,
         sleepAfter: 3,
         browser,

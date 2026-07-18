@@ -11,8 +11,8 @@ import { playlistDetailResponseSchema, itemListResponseSchema } from "../schemas
 import { paginate } from "./_paginate";
 
 export interface PlaylistOptions {
-  id?: string | null;
-  data?: Record<string, unknown> | null;
+  id?: string | null | undefined;
+  data?: Record<string, unknown> | null | undefined;
 }
 
 export class Playlist {
@@ -20,15 +20,15 @@ export class Playlist {
   parent: TikTokApi;
 
   /** The ID of the playlist */
-  id?: string;
+  id?: string | undefined;
   /** The name of the playlist */
-  name?: string;
+  name?: string | undefined;
   /** The video count of the playlist */
-  videoCount?: number;
+  videoCount?: number | undefined;
   /** The creator of the playlist */
-  creator?: User;
+  creator?: User | undefined;
   /** The cover URL of the playlist */
-  coverUrl?: string;
+  coverUrl?: string | undefined;
   /** The raw data associated with this playlist */
   asDict?: Record<string, unknown>;
 

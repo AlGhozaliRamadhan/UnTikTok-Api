@@ -8,7 +8,7 @@ const msToken = process.env.ms_token ?? undefined;
 async function soundExample() {
   const api = new TikTokApi();
   await api.createSessions({
-    msTokens: msToken ? [msToken] : undefined,
+    msTokens: msToken ? [msToken] : null,
     numSessions: 1,
     sleepAfter: 3,
     browser: (process.env.TIKTOK_BROWSER as "chromium" | "firefox" | "webkit") ?? "chromium",

@@ -19,7 +19,7 @@ async function main() {
     await api.createSessions({
         numSessions: 1,
         headless: true,
-        contextOptions: hasState ? { storageState: statePath } : undefined
+        contextOptions: hasState ? { storageState: statePath } : (undefined as any)
     });
 
     console.log("Fetching trending videos...");

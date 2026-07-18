@@ -5,7 +5,7 @@
 > **Disclaimer:** This project is not affiliated with, endorsed by, or connected to TikTok, ByteDance, or the original author of the Python TikTok-Api. It is an independent, open-source TypeScript port designed for integration into Node.js applications and AI tools.
 
 [![NPM Version](https://img.shields.io/npm/v/untiktok-api?color=red)](https://www.npmjs.com/package/untiktok-api)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?logo=typescript)](https://www.typescriptlang.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-6.x-blue?logo=typescript)](https://www.typescriptlang.org/)
 [![Playwright](https://img.shields.io/badge/Playwright-1.61-green?logo=playwright)](https://playwright.dev/)
 [![Node.js](https://img.shields.io/badge/Node.js-20.10+-brightgreen?logo=node.js)](https://nodejs.org/)
 
