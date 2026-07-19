@@ -3,14 +3,14 @@
 // Mirrors TikTokApi/api/comment.py
 // ============================================================
 
-import type { TikTokApi } from "../tiktok";
+import type { ITikTokApi } from "../types";
 import type { User } from "./user";
 import { commentListResponseSchema } from "../schemas";
 import { paginate } from "./_paginate";
 
 export class Comment {
   /** Static reference to the parent TikTokApi instance */
-  parent: TikTokApi;
+  parent: ITikTokApi;
 
   /** The id of the comment */
   id!: string;
@@ -23,7 +23,7 @@ export class Comment {
   /** The raw data associated with this comment */
   asDict: Record<string, unknown>;
 
-  constructor(parent: TikTokApi, data?: Record<string, unknown>) {
+  constructor(parent: ITikTokApi, data?: Record<string, unknown>) {
     this.parent = parent;
     this.asDict = data ?? {};
     if (data) {

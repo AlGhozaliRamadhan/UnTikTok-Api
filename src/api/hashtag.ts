@@ -3,7 +3,7 @@
 // Mirrors TikTokApi/api/hashtag.py
 // ============================================================
 
-import type { TikTokApi } from "../tiktok";
+import type { ITikTokApi } from "../types";
 import type { Video } from "./video";
 import { InvalidResponseException, InvalidParameterException } from "../exceptions";
 import { hashtagDetailResponseSchema, itemListResponseSchema } from "../schemas";
@@ -17,7 +17,7 @@ export interface HashtagOptions {
 
 export class Hashtag {
   /** Static reference to the parent TikTokApi instance */
-  parent: TikTokApi;
+  parent: ITikTokApi;
 
   /** The ID of the hashtag */
   id?: string | undefined;
@@ -30,7 +30,7 @@ export class Hashtag {
   /** Stats if available */
   stats?: Record<string, unknown>;
 
-  constructor(parent: TikTokApi, { name, id, data }: HashtagOptions = {}) {
+  constructor(parent: ITikTokApi, { name, id, data }: HashtagOptions = {}) {
     this.parent = parent;
     if (name != null) this.name = name;
     if (id != null) this.id = id;

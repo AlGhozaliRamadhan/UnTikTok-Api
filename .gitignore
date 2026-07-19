@@ -144,6 +144,7 @@ state.json
 docs/decisions/
 # Agent-config / skill folders belong to the developer's local toolchain.
 AGENTS.md
+CLAUDE.md
 .claude/
 .codex/
 .agents/

@@ -3,7 +3,7 @@
 // Mirrors TikTokApi/api/playlist.py
 // ============================================================
 
-import type { TikTokApi } from "../tiktok";
+import type { ITikTokApi } from "../types";
 import type { Video } from "./video";
 import type { User } from "./user";
 import { InvalidResponseException, InvalidParameterException } from "../exceptions";
@@ -17,7 +17,7 @@ export interface PlaylistOptions {
 
 export class Playlist {
   /** Static reference to the parent TikTokApi instance */
-  parent: TikTokApi;
+  parent: ITikTokApi;
 
   /** The ID of the playlist */
   id?: string | undefined;
@@ -32,7 +32,7 @@ export class Playlist {
   /** The raw data associated with this playlist */
   asDict?: Record<string, unknown>;
 
-  constructor(parent: TikTokApi, { id, data }: PlaylistOptions = {}) {
+  constructor(parent: ITikTokApi, { id, data }: PlaylistOptions = {}) {
     this.parent = parent;
     if (!id && !data?.["id"]) {
       throw new InvalidParameterException(null, "You must provide id parameter.");

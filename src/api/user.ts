@@ -3,7 +3,7 @@
 // Mirrors TikTokApi/api/user.py
 // ============================================================
 
-import type { TikTokApi } from "../tiktok";
+import type { ITikTokApi } from "../types";
 import type { Video } from "./video";
 import type { Playlist } from "./playlist";
 import { InvalidResponseException, InvalidParameterException } from "../exceptions";
@@ -24,7 +24,7 @@ export interface UserOptions {
 
 export class User {
   /** Static reference to the parent TikTokApi instance */
-  parent: TikTokApi;
+  parent: ITikTokApi;
 
   /** The ID of the user */
   userId?: string;
@@ -35,7 +35,7 @@ export class User {
   /** The raw data associated with this user */
   asDict?: Record<string, unknown>;
 
-  constructor(parent: TikTokApi, { username, userId, secUid, data }: UserOptions = {}) {
+  constructor(parent: ITikTokApi, { username, userId, secUid, data }: UserOptions = {}) {
     this.parent = parent;
     this._updateIdSecUidUsername(userId, secUid, username);
     if (data) {

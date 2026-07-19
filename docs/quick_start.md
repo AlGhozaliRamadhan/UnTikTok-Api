@@ -43,9 +43,9 @@ async function startScraping() {
 
   // Fetch the videos!
   for await (const video of api.trending.videos(30)) {
-    console.log(`Title: ${video.desc}`);
+    console.log(`Title: ${video.description}`);
     console.log(`Author: @${video.author?.username}`);
-    console.log(`Views: ${video.stats?.playCount}`);
+    console.log(`Views: ${video.plays}`);
     console.log('---');
   }
 

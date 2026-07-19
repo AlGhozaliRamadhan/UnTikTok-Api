@@ -13,11 +13,11 @@
 // ============================================================
 
 import type { z } from "zod";
-import type { TikTokApi } from "../tiktok";
+import type { ITikTokApi } from "../types";
 import { InvalidResponseException } from "../exceptions";
 
 export interface PaginateOptions<S extends z.ZodType, TItem, TOut> {
-  parent: TikTokApi;
+  parent: ITikTokApi;
   url: string;
   schema: S;
   buildParams: (cursor: number, found: number) => Record<string, unknown>;

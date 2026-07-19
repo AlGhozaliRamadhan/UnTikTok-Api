@@ -48,7 +48,7 @@ async function trendingVideos() {
   for await (const video of api.trending.videos(10)) {
     console.log(`Video ID: ${video.id}`);
     console.log(`Author: ${video.author?.username}`);
-    console.log(`Views: ${video.stats?.playCount}`);
+    console.log(`Views: ${video.plays}`);
   }
 
   await api.closeSessions();

@@ -3,7 +3,7 @@
 // Mirrors TikTokApi/api/search.py
 // ============================================================
 
-import type { TikTokApi } from "../tiktok";
+import type { ITikTokApi } from "../types";
 import type { User } from "./user";
 import type { Video } from "./video";
 import { searchResponseSchema } from "../schemas";
@@ -11,9 +11,9 @@ import { paginate } from "./_paginate";
 
 export class Search {
   /** Static reference to the parent TikTokApi instance */
-  parent: TikTokApi;
+  parent: ITikTokApi;
 
-  constructor(parent: TikTokApi) {
+  constructor(parent: ITikTokApi) {
     this.parent = parent;
   }
 

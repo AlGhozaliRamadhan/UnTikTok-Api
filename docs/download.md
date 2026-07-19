@@ -21,10 +21,17 @@ console.log(`Pinned by creator: ${video.isPinned}`);
 
 ## How Downloading Works
 
-When you call `.bytes()`, the library bypasses the standard TikTok video player and directly accesses the raw CDN URL (`v16-webapp-prime.tiktok.com` etc). 
+When you call `.bytes()`, the library reads the CDN URL from the video metadata (after `video.info()` or after receiving a video from a feed) and fetches the raw MP4 payload (`v16-webapp-prime.tiktok.com`, etc.).
 
-**Watermark Free:**
-Because the library fetches the raw video payload delivered to the browser player, the resulting download is usually completely free of the bouncing TikTok watermark (which is applied via mobile sharing, not strictly baked into the master CDN file).
+**Watermark free (usually):**
+The browser-player payload is typically free of the bouncing share watermark (that watermark is applied on mobile share flows, not always baked into the master CDN file).
+
+**CDN may 403 from Node:**
+TikTok CDNs heavily fingerprint TLS / client identity. A plain Node/`axios` download can return **403** even when the same URL works inside Playwright. Prefer:
+
+1. Call `video.info()` (or obtain the video via a session-backed feed) so cookies and CDN links are current.
+2. Retry through a residential proxy if you still see 403s.
+3. Treat “no watermark + always succeeds from bare Node” as **best-effort**, not a guarantee.
 
 ## Example Usage
 

@@ -20,7 +20,7 @@ async function hashtagVideos() {
   // Do not include the '#' symbol, just the word itself
   for await (const video of api.hashtag({ name: 'funny' }).videos(20)) {
     console.log(`Video ID: ${video.id}`);
-    console.log(`Description: ${video.desc}`);
+    console.log(`Description: ${video.description}`);
   }
 
   await api.closeSessions();

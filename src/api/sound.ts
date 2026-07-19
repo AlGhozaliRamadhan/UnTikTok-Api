@@ -3,7 +3,7 @@
 // Mirrors TikTokApi/api/sound.py
 // ============================================================
 
-import type { TikTokApi } from "../tiktok";
+import type { ITikTokApi } from "../types";
 import type { User } from "./user";
 import type { Video } from "./video";
 import { InvalidResponseException, InvalidParameterException } from "../exceptions";
@@ -17,7 +17,7 @@ export interface SoundOptions {
 
 export class Sound {
   /** Static reference to the parent TikTokApi instance */
-  parent: TikTokApi;
+  parent: ITikTokApi;
 
   /** TikTok's ID for the sound */
   id?: string;
@@ -36,7 +36,7 @@ export class Sound {
   /** The raw data */
   asDict?: Record<string, unknown>;
 
-  constructor(parent: TikTokApi, { id, data }: SoundOptions = {}) {
+  constructor(parent: ITikTokApi, { id, data }: SoundOptions = {}) {
     this.parent = parent;
     if (data) {
       this.asDict = data;

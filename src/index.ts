@@ -30,6 +30,8 @@ export type {
   ProxySettings,
   ResourceStats,
   HealthCheckResult,
+  MakeRequestOptions,
+  ITikTokApi,
 } from "./types";
 
 export { stealthAsync, StealthConfig } from "./stealth";

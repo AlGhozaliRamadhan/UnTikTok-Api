@@ -4,6 +4,14 @@
 // ============================================================
 
 import type { BrowserContext, Page } from "playwright";
+import type { z } from "zod";
+import type { Logger } from "./logger";
+import type { User, UserOptions } from "./api/user";
+import type { Video, VideoOptions } from "./api/video";
+import type { Sound, SoundOptions } from "./api/sound";
+import type { Hashtag, HashtagOptions } from "./api/hashtag";
+import type { Comment } from "./api/comment";
+import type { Playlist, PlaylistOptions } from "./api/playlist";
 
 // ---------------------------------------------------------------------------
 // Proxy settings type (playwright's ProxySettings is internal; we define ours)
@@ -55,6 +63,19 @@ export interface CreateSessionsOptions {
 }
 
 // ---------------------------------------------------------------------------
+// makeRequest options (ADR-007 / ADR-009)
+// ---------------------------------------------------------------------------
+export interface MakeRequestOptions {
+  url: string;
+  headers?: Record<string, string> | null | undefined;
+  params?: Record<string, unknown> | null | undefined;
+  retries?: number;
+  exponentialBackoff?: boolean;
+  sessionIndex?: number | undefined;
+  schema?: z.ZodType | undefined;
+}
+
+// ---------------------------------------------------------------------------
 // Generic response shapes from TikTok
 // ---------------------------------------------------------------------------
 export type TikTokResponse = Record<string, unknown>;
@@ -77,4 +98,36 @@ export interface HealthCheckResult extends ResourceStats {
   sessionDetails: Array<{ index: number; valid: boolean; markedValid: boolean }>;
   healthySessions: number;
   warning?: string;
+}
+
+// ---------------------------------------------------------------------------
+// ITikTokApi — surface that api/* modules depend on (ADR-009)
+// Breaks the bidirectional type edge: api/* no longer import TikTokApi.
+// ---------------------------------------------------------------------------
+export interface ITikTokApi {
+  readonly logger: Logger;
+
+  makeRequest<S extends z.ZodType>(
+    options: MakeRequestOptions & { schema: S }
+  ): Promise<z.infer<S>>;
+  makeRequest(options: MakeRequestOptions): Promise<Record<string, unknown>>;
+
+  user(options: UserOptions): User;
+  video(options: VideoOptions): Video;
+  sound(options: SoundOptions): Sound;
+  hashtag(options: HashtagOptions): Hashtag;
+  comment(options: { data?: Record<string, unknown> }): Comment;
+  playlist(options: PlaylistOptions): Playlist;
+
+  /** Resolve a live session (validates / recovers). Prefer over any sync lookup. */
+  _getValidSessionIndex(
+    kwargs?: { sessionIndex?: number | undefined }
+  ): Promise<[number, TikTokPlaywrightSession]>;
+
+  setSessionCookies(
+    session: TikTokPlaywrightSession,
+    cookies: Record<string, unknown>[]
+  ): Promise<void>;
+
+  getSessionCookies(session: TikTokPlaywrightSession): Promise<Record<string, string>>;
 }

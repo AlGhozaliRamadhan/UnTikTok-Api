@@ -3,16 +3,16 @@
 // Mirrors TikTokApi/api/trending.py
 // ============================================================
 
-import type { TikTokApi } from "../tiktok";
+import type { ITikTokApi } from "../types";
 import type { Video } from "./video";
 import { trendingFeedResponseSchema } from "../schemas";
 import { paginate } from "./_paginate";
 
 export class Trending {
   /** Static reference to the parent TikTokApi instance */
-  parent: TikTokApi;
+  parent: ITikTokApi;
 
-  constructor(parent: TikTokApi) {
+  constructor(parent: ITikTokApi) {
     this.parent = parent;
   }
 

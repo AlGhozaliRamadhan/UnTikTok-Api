@@ -4,7 +4,7 @@
 // ============================================================
 
 import axios from "axios";
-import type { TikTokApi } from "../tiktok";
+import type { ITikTokApi } from "../types";
 import type { User } from "./user";
 import type { Sound } from "./sound";
 import type { Hashtag } from "./hashtag";
@@ -27,7 +27,7 @@ export interface VideoOptions {
 
 export class Video {
   /** Static reference to the parent TikTokApi instance */
-  parent: TikTokApi;
+  parent: ITikTokApi;
 
   /** TikTok's ID of the Video */
   id?: string | undefined;
@@ -82,7 +82,7 @@ export class Video {
     return Boolean(this.asDict?.["isPinnedItem"]) || Boolean(itemControl?.["isPinned"]);
   }
 
-  constructor(parent: TikTokApi, { id, url, data, sessionIndex, proxy }: VideoOptions = {}) {
+  constructor(parent: ITikTokApi, { id, url, data, sessionIndex, proxy }: VideoOptions = {}) {
     this.parent = parent;
     this.id = id ?? undefined;
     this.url = url ?? undefined;
@@ -91,19 +91,16 @@ export class Video {
       this.asDict = data;
       this._extractFromData();
     } else if (url) {
-      // Python calls extract_video_id_from_url synchronously in __init__ using _get_session.
-      // In TypeScript the session is synchronous too — we replicate that via the sync _getSession.
-      const [, session] = this.parent._getSession({ sessionIndex });
-      const proxyVal = proxy ?? (session.proxy as string | undefined);
-
-      // Resolve synchronously: run a sync HEAD follow-redirect.
-      // We extract the id by parsing the URL if it already contains /video/;
-      // otherwise we schedule an async resolution and store the raw url.
-      // If the url already has the video id embedded we resolve it immediately.
+      // Extract id synchronously when the URL already embeds /video/{id}.
+      // Short/redirect URLs must use the async Video.fromUrl() factory instead
+      // (which validates a live session via _getValidSessionIndex).
+      // sessionIndex/proxy are accepted for API parity with fromUrl but are
+      // unused until a network hop is required.
+      void sessionIndex;
+      void proxy;
       if (url.includes("/video/")) {
         this.id = url.split("/video/")[1]!.split("?")[0];
       }
-      // If not, the caller must await Video.fromUrl() instead.
     }
 
     if (!this.id && !this.url) {
@@ -123,12 +120,15 @@ export class Video {
    * Use this instead of `new Video({ url })` when you have a short/redirect URL.
    */
   static async fromUrl(
-    parent: TikTokApi,
+    parent: ITikTokApi,
     url: string,
     kwargs: { sessionIndex?: number; proxy?: string } = {}
   ): Promise<Video> {
-    const [, session] = parent._getSession(kwargs);
-    const proxyVal = kwargs.proxy ?? (session.proxy as string | undefined);
+    const [, session] = await parent._getValidSessionIndex({
+      sessionIndex: kwargs.sessionIndex,
+    });
+    // proxy reserved for future HEAD-via-proxy; prefer session headers today
+    void kwargs.proxy;
 
     const response = await axios.head(url, {
       headers: session.headers ?? {},
@@ -163,8 +163,11 @@ export class Video {
     sessionIndex?: number;
     proxy?: string;
   } = {}): Promise<Record<string, unknown>> {
-    const [, session] = this.parent._getSession(kwargs);
-    const proxy = kwargs.proxy ?? (session.proxy as string | undefined);
+    const [, session] = await this.parent._getValidSessionIndex({
+      sessionIndex: kwargs.sessionIndex,
+    });
+    // proxy reserved for axios fallback path; unused when browser navigation works
+    void kwargs.proxy;
 
     if (!this.url) {
         throw new InvalidParameterException(
@@ -296,8 +299,9 @@ export class Video {
    * ```
    */
   async bytes(options: { stream?: boolean } & Record<string, unknown> = {}): Promise<Buffer | AsyncGenerator<Buffer>> {
-    // Python: i, session = self.parent._get_session(**kwargs)
-    const [, session] = this.parent._getSession(options as { sessionIndex?: number });
+    const sessionIndex =
+      typeof options.sessionIndex === "number" ? options.sessionIndex : undefined;
+    const [, session] = await this.parent._getValidSessionIndex({ sessionIndex });
     const videoData = (this.asDict?.["video"] ?? {}) as Record<string, string>;
     const downloadAddr = videoData["downloadAddr"] || videoData["playAddr"];
 

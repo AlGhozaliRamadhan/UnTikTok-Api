@@ -1,6 +1,8 @@
 // ============================================================
 // tiktok.ts
-// Mirrors TikTokApi/tiktok.py
+// TikTokApi — thin composer + public API surface (ADR-009)
+// Session validation, signing, dispatch, and health live in
+// session/, request/, health/ modules.
 // ============================================================
 
 import {
@@ -10,21 +12,30 @@ import {
 } from "playwright";
 import { randomInt } from "crypto";
 import { URL } from "url";
+import type { z } from "zod";
 
-import type { TikTokPlaywrightSession, CreateSessionsOptions, ResourceStats, HealthCheckResult, ProxySettings } from "./types";
-import {
-  EmptyResponseException,
-  InvalidJSONException,
-  InvalidParameterException,
-  InvalidResponseException,
-  SessionUnavailableException,
-  CaptchaException,
-  NotFoundException,
-  SoundRemovedException,
-} from "./exceptions";
+import type {
+  TikTokPlaywrightSession,
+  CreateSessionsOptions,
+  ResourceStats,
+  HealthCheckResult,
+  ProxySettings,
+  MakeRequestOptions,
+  ITikTokApi,
+} from "./types";
+import { InvalidParameterException } from "./exceptions";
 import { randomChoice, sleep } from "./helpers";
 import { stealthAsync } from "./stealth";
-import { z } from "zod";
+import { Logger, type LogLevel } from "./logger";
+import {
+  DEFAULT_NUM_SESSIONS,
+  DEFAULT_SLEEP_AFTER,
+  DEFAULT_TIMEOUT_MS,
+} from "./constants";
+import { SessionManager } from "./session/SessionManager";
+import { Signer } from "./request/Signer";
+import { RequestDispatcher } from "./request/RequestDispatcher";
+import { HealthMonitor } from "./health/HealthMonitor";
 
 import { User, type UserOptions } from "./api/user";
 import { Video, type VideoOptions } from "./api/video";
@@ -35,57 +46,18 @@ import { Trending } from "./api/trending";
 import { Search } from "./api/search";
 import { Playlist, type PlaylistOptions } from "./api/playlist";
 
-// ---------------------------------------------------------------------------
-// Logger (simple console-based)
-// ---------------------------------------------------------------------------
-type LogLevel = "debug" | "info" | "warn" | "error";
-
-export class Logger {
-  private level: LogLevel;
-  private name: string;
-
-  constructor(name: string, level: LogLevel = "warn") {
-    this.name = name;
-    this.level = level;
-  }
-
-  private _levels: Record<LogLevel, number> = { debug: 0, info: 1, warn: 2, error: 3 };
-
-  private _log(severity: LogLevel, message: string): void {
-    if (this._levels[severity] >= this._levels[this.level]) {
-      const ts = new Date().toISOString();
-      console[severity === "warn" ? "warn" : severity](`${ts} - ${this.name} - ${severity.toUpperCase()} - ${message}`);
-    }
-  }
-
-  debug(msg: string): void { this._log("debug", msg); }
-  info(msg: string): void { this._log("info", msg); }
-  warn(msg: string): void { this._log("warn", msg); }
-  error(msg: string): void { this._log("error", msg); }
-}
-
-// ---------------------------------------------------------------------------
-// makeRequest options
-// ---------------------------------------------------------------------------
-export interface MakeRequestOptions {
-  url: string;
-  headers?: Record<string, string> | null | undefined;
-  params?: Record<string, unknown> | null | undefined;
-  retries?: number;
-  exponentialBackoff?: boolean;
-  sessionIndex?: number | undefined;
-  schema?: z.ZodType | undefined;
-}
+// Re-export for any external consumers that imported from tiktok.ts
+export type { MakeRequestOptions } from "./types";
+export { Logger } from "./logger";
+export type { LogLevel } from "./logger";
 
 // ---------------------------------------------------------------------------
 // TikTokApi
 // ---------------------------------------------------------------------------
-export class TikTokApi {
-  // ── Static sub-module references (mirrors Python class-level attributes) ──
+export class TikTokApi implements ITikTokApi {
   readonly trending: Trending;
   readonly search: Search;
 
-  // ── State ──
   sessions: TikTokPlaywrightSession[] = [];
   browser: Browser | null = null;
   playwright: { stop: () => Promise<void> } | null = null;
@@ -94,10 +66,14 @@ export class TikTokApi {
   private _sessionCreationLock = false;
   private _cleanupCalled = false;
   private _autoCleanupDeadSessions = true;
-  private _playwrightInstance: { stop: () => Promise<void> } | null = null;
   private _userAgent: string | null = null;
 
   readonly logger: Logger;
+
+  private readonly _sessionManager: SessionManager;
+  private readonly _signer: Signer;
+  private readonly _dispatcher: RequestDispatcher;
+  private readonly _health: HealthMonitor;
 
   constructor(options: { loggingLevel?: LogLevel; loggerName?: string } = {}) {
     const { loggingLevel = "warn", loggerName } = options;
@@ -106,11 +82,46 @@ export class TikTokApi {
     this.trending = new Trending(this);
     this.search = new Search(this);
 
+    // Compose focused modules. Arrow host methods keep `this` lexical without
+    // a no-this-alias local, and without circular imports of TikTokApi.
+    this._sessionManager = new SessionManager({
+      getLogger: () => this.logger,
+      getSessions: () => this.sessions,
+      isSessionRecoveryEnabled: () => this._sessionRecoveryEnabled,
+      isAutoCleanupDeadSessions: () => this._autoCleanupDeadSessions,
+      getSessionCreationLock: () => this._sessionCreationLock,
+      setSessionCreationLock: (v: boolean) => {
+        this._sessionCreationLock = v;
+      },
+    });
 
-    // Wire static parent references
+    this._signer = new Signer({
+      getLogger: () => this.logger,
+      getValidSessionIndex: (kwargs) => this._getValidSessionIndex(kwargs),
+      markSessionInvalid: (session) => this._markSessionInvalid(session),
+    });
+
+    this._dispatcher = new RequestDispatcher({
+      getLogger: () => this.logger,
+      getValidSessionIndex: (kwargs) => this._getValidSessionIndex(kwargs),
+      markSessionInvalid: (session) => this._markSessionInvalid(session),
+      getSessionCookies: (session) => this.getSessionCookies(session),
+      signUrl: (url, kwargs) => this.signUrl(url, kwargs),
+      runFetchScript: (url, headers, kwargs) => this.runFetchScript(url, headers, kwargs),
+    });
+
+    this._health = new HealthMonitor({
+      getSessions: () => this.sessions,
+      getBrowser: () => this.browser,
+      getPlaywright: () => this.playwright,
+      isCleanupCalled: () => this._cleanupCalled,
+      isAutoCleanupEnabled: () => this._autoCleanupDeadSessions,
+      isRecoveryEnabled: () => this._sessionRecoveryEnabled,
+      isSessionValid: (session) => this._isSessionValid(session),
+    });
   }
 
-  // ── Factory methods (mirror Python's api.user(), api.video(), etc.) ──
+  // ── Factory methods ──
 
   user(options: UserOptions): User {
     return new User(this, options);
@@ -136,164 +147,31 @@ export class TikTokApi {
     return new Playlist(this, options);
   }
 
-  // ── Session params ──
-
-  private async _setSessionParams(session: TikTokPlaywrightSession): Promise<void> {
-    const page = session.page;
-    // Pass as string expressions so TypeScript never sees browser-only globals
-    const userAgent: string = await page.evaluate("navigator.userAgent") as string;
-    const language: string = await page.evaluate(
-      "navigator.language || navigator.userLanguage || 'en'"
-    ) as string;
-    const platform: string = await page.evaluate("navigator.platform") as string;
-    const timezone: string = await page.evaluate(
-      "Intl.DateTimeFormat().resolvedOptions().timeZone"
-    ) as string;
-
-    const deviceId = String(BigInt(randomInt(2 ** 30)) * BigInt(2 ** 30) + BigInt(randomInt(2 ** 30)));
-    const historyLen = String(randomInt(1, 11));
-    const screenHeight = String(randomInt(600, 1081));
-    const screenWidth = String(randomInt(800, 1921));
-
-    session.params = {
-      aid: "1988",
-      app_language: language,
-      app_name: "tiktok_web",
-      browser_language: language,
-      browser_name: "Mozilla",
-      browser_online: "true",
-      browser_platform: platform,
-      browser_version: userAgent,
-      channel: "tiktok_web",
-      cookie_enabled: "true",
-      device_id: deviceId,
-      device_platform: "web_pc",
-      focus_state: "true",
-      from_page: "user",
-      history_len: historyLen,
-      is_fullscreen: "false",
-      is_page_visible: "true",
-      language,
-      os: platform,
-      priority_region: "",
-      referer: "",
-      region: "US",
-      screen_height: screenHeight,
-      screen_width: screenWidth,
-      tz_name: timezone,
-      webcast_language: language,
-    };
-  }
-
-  // ── Session validation ──
+  // ── Session validation (delegated) ──
 
   async _isSessionValid(session: TikTokPlaywrightSession): Promise<boolean> {
-    if (!session.isValid) return false;
-    try {
-      // Accessing .url throws if page/context is closed
-      void session.page.url();
-      return true;
-    } catch (e) {
-      this.logger.warn(`Session validation failed: ${e}`);
-      session.isValid = false;
-      return false;
-    }
+    return this._sessionManager.isSessionValid(session);
   }
 
   async _markSessionInvalid(session: TikTokPlaywrightSession): Promise<void> {
-    session.isValid = false;
-
-    try { await session.page.close(); } catch (e) {
-      this.logger.debug(`Error closing page during invalidation: ${e}`);
-    }
-    try { await session.context.close(); } catch (e) {
-      this.logger.debug(`Error closing context during invalidation: ${e}`);
-    }
-
-    if (this._autoCleanupDeadSessions) {
-      const idx = this.sessions.indexOf(session);
-      if (idx !== -1) {
-        this.sessions.splice(idx, 1);
-        this.logger.debug(`Automatically removed dead session. Remaining: ${this.sessions.length}`);
-      }
-    }
+    return this._sessionManager.markSessionInvalid(session);
   }
 
-  async _getValidSessionIndex(kwargs: { sessionIndex?: number | undefined } = {}): Promise<[number, TikTokPlaywrightSession]> {
-    const maxAttempts = 3;
-
-    for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      if (kwargs.sessionIndex != null) {
-        const i = kwargs.sessionIndex;
-        if (i < this.sessions.length) {
-          const session = this.sessions[i]!;
-          if (await this._isSessionValid(session)) return [i, session];
-          this.logger.warn(`Requested session ${i} is invalid`);
-        }
-      } else {
-        const validSessions: Array<[number, TikTokPlaywrightSession]> = [];
-        for (let idx = 0; idx < this.sessions.length; idx++) {
-          if (await this._isSessionValid(this.sessions[idx]!)) {
-            validSessions.push([idx, this.sessions[idx]!]);
-          }
-        }
-        if (validSessions.length > 0) {
-          return validSessions[randomInt(0, validSessions.length)]!;
-        }
-      }
-
-      if (this._sessionRecoveryEnabled && attempt < maxAttempts - 1) {
-        this.logger.warn(`No valid sessions found, attempting recovery (attempt ${attempt + 1}/${maxAttempts})`);
-        await this._recoverSessions();
-      } else {
-        break;
-      }
-    }
-
-    throw new SessionUnavailableException(
-      null,
-      "No valid sessions available. All sessions appear to be dead. " +
-      "Please call createSessions() again."
-    );
+  async _getValidSessionIndex(
+    kwargs: { sessionIndex?: number | undefined } = {}
+  ): Promise<[number, TikTokPlaywrightSession]> {
+    return this._sessionManager.getValidSessionIndex(kwargs);
   }
 
-  private async _recoverSessions(): Promise<void> {
-    if (this._sessionCreationLock) return;
-    this._sessionCreationLock = true;
-    try {
-      this.logger.info("Starting session recovery...");
-      const initial = this.sessions.length;
-      const validSessions: TikTokPlaywrightSession[] = [];
-      for (const s of this.sessions) {
-        if (await this._isSessionValid(s)) validSessions.push(s);
-      }
-      this.sessions = validSessions;
-      const removed = initial - this.sessions.length;
-      if (removed > 0) this.logger.info(`Removed ${removed} dead session(s)`);
-    } finally {
-      this._sessionCreationLock = false;
-    }
-  }
-
-  // ── _getSession (deprecated but kept for compat) ──
-
-  _getSession(kwargs: { sessionIndex?: number | undefined } = {}): [number, TikTokPlaywrightSession] {
-    if (this.sessions.length === 0) {
-      throw new SessionUnavailableException(null, "No sessions created, please create sessions first");
-    }
-    const i = kwargs.sessionIndex ?? randomInt(0, this.sessions.length);
-    return [i, this.sessions[i]!];
-  }
-
-  // ── Create sessions ──
+  // ── Create sessions (lifecycle stays on the composer for now) ──
 
   async createSessions(options: CreateSessionsOptions = {}): Promise<void> {
     const {
-      numSessions = 5,
+      numSessions = DEFAULT_NUM_SESSIONS,
       headless = true,
       msTokens = null,
       proxies = null,
-      sleepAfter = 1,
+      sleepAfter = DEFAULT_SLEEP_AFTER,
       startingUrl = "https://www.tiktok.com",
       contextOptions = {},
       overrideBrowserArgs = null,
@@ -303,7 +181,7 @@ export class TikTokApi {
       executablePath = null,
       pageFactory = null,
       browserContextFactory = null,
-      timeout = 30000,
+      timeout = DEFAULT_TIMEOUT_MS,
       enableSessionRecovery = true,
       allowPartialSessions = false,
       minSessions = null,
@@ -311,15 +189,10 @@ export class TikTokApi {
 
     this._sessionRecoveryEnabled = enableSessionRecovery;
 
-    // Start Playwright
     const { chromium: pw_chromium, firefox: pw_firefox, webkit: pw_webkit } = await import("playwright");
 
     if (browserContextFactory) {
-      // Custom factory: call it and store the returned context/browser
       const factoryResult = await browserContextFactory(null);
-      // browserContextFactory returns a BrowserContext, but we store it as Browser
-      // so that _createSession can call newContext() on it — however when
-      // browserContextFactory is provided, _createSession skips newContext().
       this.browser = factoryResult as unknown as Browser;
     } else {
       let launchArgs = overrideBrowserArgs ?? undefined;
@@ -336,11 +209,11 @@ export class TikTokApi {
           launchOpts.args = launchArgs;
           launchOpts.headless = false;
         }
-        this.browser = await pw_chromium.launch(launchOpts as any);
+        this.browser = await pw_chromium.launch(launchOpts as Parameters<typeof pw_chromium.launch>[0]);
       } else if (browserName === "firefox") {
-        this.browser = await pw_firefox.launch(launchOpts as any);
+        this.browser = await pw_firefox.launch(launchOpts as Parameters<typeof pw_firefox.launch>[0]);
       } else if (browserName === "webkit") {
-        this.browser = await pw_webkit.launch(launchOpts as any);
+        this.browser = await pw_webkit.launch(launchOpts as Parameters<typeof pw_webkit.launch>[0]);
       } else {
         throw new InvalidParameterException(
           null,
@@ -349,17 +222,17 @@ export class TikTokApi {
       }
     }
 
-    // Detect dynamic User-Agent to avoid Chrome version mismatches in headless mode
-    let resolvedUA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
+    let resolvedUA =
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
     if (this.browser && browserName === "chromium") {
       try {
         const tempContext = await this.browser.newContext();
         const tempPage = await tempContext.newPage();
-        const rawUA = await tempPage.evaluate("navigator.userAgent") as string;
+        const rawUA = (await tempPage.evaluate("navigator.userAgent")) as string;
         resolvedUA = rawUA.replace("HeadlessChrome", "Chrome");
         await tempPage.close();
         await tempContext.close();
-      } catch (e) {
+      } catch {
         // Use hardcoded fallback
       }
     }
@@ -396,7 +269,7 @@ export class TikTokApi {
         throw new InvalidParameterException(
           null,
           `Failed to create minimum required sessions. Created ${succeeded}/${numSessions}, needed ${minRequired}.\n` +
-          `Errors: ${errors.join("; ")}`
+            `Errors: ${errors.join("; ")}`
         );
       }
       if (failed > 0) {
@@ -424,9 +297,9 @@ export class TikTokApi {
       msToken = null,
       proxy,
       contextOptions = {},
-      sleepAfter = 1,
+      sleepAfter = DEFAULT_SLEEP_AFTER,
       suppressResourceLoadTypes = null,
-      timeout = 30000,
+      timeout = DEFAULT_TIMEOUT_MS,
       pageFactory = null,
     } = options;
     let { cookies = null } = options;
@@ -442,12 +315,15 @@ export class TikTokApi {
 
       let defaultUA = this._userAgent;
       if (!defaultUA) {
-        defaultUA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
+        defaultUA =
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
       }
       const ctxOpts: Record<string, unknown> = { userAgent: defaultUA, ...contextOptions };
       const pwProxyOpt = proxyToPlaywright(proxy);
       if (pwProxyOpt) ctxOpts.proxy = pwProxyOpt;
-      context = await this.browser!.newContext(ctxOpts as any);
+      context = await this.browser!.newContext(
+        ctxOpts as Parameters<Browser["newContext"]>[0]
+      );
 
       if (cookies) {
         const hostname = new URL(url).hostname;
@@ -477,7 +353,7 @@ export class TikTokApi {
         page = await pageFactory(context);
       } else {
         page = await context.newPage();
-        await stealthAsync(page);  // apply anti-bot stealth scripts
+        await stealthAsync(page);
         await applySuppression(page);
         await page.goto(url);
       }
@@ -497,7 +373,6 @@ export class TikTokApi {
 
       page.setDefaultNavigationTimeout(timeout);
 
-      // Simulate scrolling to avoid bot detection
       const x = randomInt(0, 51);
       const y = randomInt(0, 51);
       const a = randomInt(1, 51);
@@ -506,7 +381,7 @@ export class TikTokApi {
       await page.mouse.move(x, y);
       try {
         await page.waitForLoadState("networkidle", { timeout: 15000 });
-      } catch (e) {
+      } catch {
         this.logger.debug(`networkidle timeout during session creation, continuing...`);
       }
       await page.mouse.move(a, b);
@@ -535,304 +410,65 @@ export class TikTokApi {
       }
 
       this.sessions.push(session);
-      await this._setSessionParams(session);
+      await this._sessionManager.setSessionParams(session);
     } catch (e) {
       this.logger.error(`Failed to create session: ${e}`);
       throw e;
     }
   }
 
-  // ── Cookie helpers ──
+  // ── Cookie helpers (delegated) ──
 
   async setSessionCookies(
     session: TikTokPlaywrightSession,
     cookies: Record<string, unknown>[]
   ): Promise<void> {
-    // Cast via unknown to satisfy Playwright's strict cookie type
-    await session.context.addCookies(cookies as unknown as Parameters<BrowserContext["addCookies"]>[0]);
+    return this._sessionManager.setSessionCookies(session, cookies);
   }
 
   async getSessionCookies(session: TikTokPlaywrightSession): Promise<Record<string, string>> {
-    const cookies = await session.context.cookies();
-    return Object.fromEntries(cookies.map((c) => [c.name, c.value]));
+    return this._sessionManager.getSessionCookies(session);
   }
 
-  // ── JS fetch / XBogus / Sign ──
+  // ── JS fetch / XBogus / Sign (delegated) ──
 
-  async runFetchScript(url: string, headers: Record<string, string>, kwargs: { sessionIndex?: number } = {}): Promise<string> {
-    let session: TikTokPlaywrightSession;
-
-    try {
-      [, session] = await this._getValidSessionIndex(kwargs);
-    } catch {
-      [, session] = this._getSession(kwargs);
-    }
-
-    try {
-      return (await session.page.evaluate(async ({ fetchUrl, fetchHeaders }) => {
-        const response = await fetch(fetchUrl, { method: 'GET', headers: fetchHeaders });
-        return await response.text();
-      }, { fetchUrl: url, fetchHeaders: headers })) as string;
-    } catch (e) {
-      this.logger.error(`Session failed during fetch: ${e}`);
-      await this._markSessionInvalid(session);
-      throw e;
-    }
+  async runFetchScript(
+    url: string,
+    headers: Record<string, string>,
+    kwargs: { sessionIndex?: number } = {}
+  ): Promise<string> {
+    return this._signer.runFetchScript(url, headers, kwargs);
   }
 
-  async generateXBogus(url: string, kwargs: { sessionIndex?: number } = {}): Promise<Record<string, string>> {
-    let session: TikTokPlaywrightSession;
-    try {
-      [, session] = await this._getValidSessionIndex(kwargs);
-    } catch {
-      [, session] = this._getSession(kwargs);
-    }
-
-    const maxAttempts = 5;
-    for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      try {
-        const timeoutMs = randomInt(5000, 20001);
-        await session.page.waitForFunction(
-          "typeof window !== 'undefined' && window.byted_acrawler !== undefined",
-          { timeout: timeoutMs }
-        );
-        break;
-      } catch (e) {
-        if (attempt === maxAttempts - 1) {
-          throw new EmptyResponseException(
-            { url },
-            `Failed to load tiktok after ${maxAttempts} attempts, consider using a proxy`,
-            undefined
-          );
-        }
-        const tryUrls = [
-          "https://www.tiktok.com/foryou",
-          "https://www.tiktok.com",
-          "https://www.tiktok.com/@tiktok",
-        ];
-        await session.page.goto(tryUrls[randomInt(0, tryUrls.length)]!);
-      }
-    }
-
-    try {
-      const result = await session.page.evaluate(
-        `window.byted_acrawler.frontierSign("${url}")`
-      ) as Record<string, string>;
-      return result;
-    } catch (e) {
-      this.logger.error(`Session died during x-bogus evaluation: ${e}`);
-      await this._markSessionInvalid(session);
-      throw e;
-    }
+  async generateXBogus(
+    url: string,
+    kwargs: { sessionIndex?: number } = {}
+  ): Promise<Record<string, string>> {
+    return this._signer.generateXBogus(url, kwargs);
   }
 
   async signUrl(url: string, kwargs: { sessionIndex?: number } = {}): Promise<string> {
-    let i: number;
-    let session: TikTokPlaywrightSession;
-
-    try {
-      [i, session] = await this._getValidSessionIndex(kwargs);
-    } catch {
-      [i, session] = this._getSession(kwargs);
-    }
-
-    const xBogus = (await this.generateXBogus(url, { sessionIndex: i }))["X-Bogus"];
-    if (!xBogus) throw new EmptyResponseException({ url }, "Failed to generate X-Bogus");
-
-    return url + (url.includes("?") ? "&" : "?") + `X-Bogus=${xBogus}`;
+    return this._signer.signUrl(url, kwargs);
   }
 
   // ── Session Storage ──
-  
+
   /**
    * Saves the current Playwright browser context state (cookies, local storage) to a file.
-   * You can load this state back by passing \`contextOptions: { storageState: "path.json" }\` to \`createSessions\`.
+   * You can load this state back by passing `contextOptions: { storageState: "path.json" }` to `createSessions`.
    */
   async saveSessionState(path: string, sessionIndex = 0): Promise<void> {
-    if (this.sessions.length <= sessionIndex) {
-      throw new SessionUnavailableException(
-        null,
-        `Session index ${sessionIndex} does not exist`
-      );
-    }
-    const session = this.sessions[sessionIndex]!;
-    if (session.context) {
-      await session.context.storageState({ path });
-      this.logger.info(`Session state saved to ${path}`);
-    }
+    return this._sessionManager.saveSessionState(path, sessionIndex);
   }
 
-  // ── makeRequest ──
+  // ── makeRequest (delegated) ──
 
-  /**
-   * Variant with a zod `schema` (ADR-007): validates + normalizes the response
-   * at the boundary and returns the schema's inferred type.
-   */
   async makeRequest<S extends z.ZodType>(
     options: MakeRequestOptions & { schema: S }
   ): Promise<z.infer<S>>;
-  /** Legacy variant (no schema): returns the raw parsed JSON object. */
   async makeRequest(options: MakeRequestOptions): Promise<Record<string, unknown>>;
   async makeRequest(options: MakeRequestOptions & { schema?: z.ZodType }): Promise<unknown> {
-    const {
-      url,
-      headers: extraHeaders = null,
-      params: extraParams = null,
-      retries = 3,
-      exponentialBackoff = true,
-      sessionIndex,
-      schema,
-    } = options;
-
-    let i: number;
-    let session: TikTokPlaywrightSession;
-
-    try {
-      [i, session] = await this._getValidSessionIndex({ sessionIndex });
-    } catch {
-      [i, session] = this._getSession({ sessionIndex });
-    }
-
-    // Python: if session.params is not None: params = {**session.params, **params}
-    // Always merge — extraParams may be null/undefined
-    const params: Record<string, unknown> = {
-      ...(session.params ?? {}),
-      ...(extraParams ?? {}),
-    };
-    // Python: if headers is not None: headers = {**session.headers, **headers} else: headers = session.headers
-    const headers: Record<string, string> = extraHeaders
-      ? { ...(session.headers ?? {}), ...extraHeaders }
-      : { ...(session.headers ?? {}) };
-
-    // Ensure msToken
-    if (!params["msToken"]) {
-      if (session.msToken) {
-        params["msToken"] = session.msToken;
-      } else {
-        const cookieMap = await this.getSessionCookies(session);
-        const msTok = cookieMap["msToken"];
-        if (!msTok) {
-          // Python uses self.logger.warn (same as .warning in Python logging)
-          this.logger.warn("Failed to get msToken from cookies, trying to make the request anyway (probably will fail)");
-        }
-        params["msToken"] = msTok;
-      }
-    }
-
-    const encodedParams = new URLSearchParams(
-      Object.fromEntries(
-        Object.entries(params)
-          .filter(([, v]) => v != null)
-          .map(([k, v]) => [k, String(v)])
-      )
-    ).toString();
-
-    const fullUrl = `${url}?${encodedParams}`;
-    const signedUrl = await this.signUrl(fullUrl, { sessionIndex: i });
-
-    let retryCount = 0;
-    while (retryCount < retries) {
-      retryCount++;
-      try {
-        const result = await this.runFetchScript(signedUrl, headers, { sessionIndex: i });
-
-        // Null on every attempt — Uniform EmptyResponseException, not raw Error.
-        if (result == null) {
-          throw new EmptyResponseException(
-            { url },
-            "runFetchScript returned null"
-          );
-        }
-        if (result === "") {
-          throw new EmptyResponseException(
-            { url },
-            "TikTok returned an empty response. They are detecting you're a bot. " +
-            "Try: headless=false, browser='webkit', or a proxy."
-          );
-        }
-
-        let data: Record<string, unknown>;
-        try {
-          data = JSON.parse(result) as Record<string, unknown>;
-        } catch {
-          // Throw on every JSON-decode failure so callers see the cause on attempt 1
-          // (the outer catch then decides whether to retry).
-          throw new InvalidJSONException({ url, body: result });
-        }
-
-        // Dispatch on response shape before returning.
-        // ADR-010: wire the previously-dead CaptchaException / NotFoundException / SoundRemovedException.
-        // status_code is the conventional TikTok signal; some endpoints also use `error_code`.
-        const statusCode = data["status_code"];
-        if (statusCode !== 0 && statusCode !== undefined) {
-          const statusStr = typeof statusCode === "string" ? statusCode.toLowerCase() : "";
-          if (statusStr.includes("captcha") || data["captcha"] != null) {
-            throw new CaptchaException({ url, ...data }, `TikTok served a captcha challenge`, Number(data["error_code"]) || undefined);
-          }
-          if (
-            statusCode === 10201 || statusCode === 10202 || statusCode === 2155 ||
-            data["status_msg"] === "Video not found" || data["status_msg"] === "User not found"
-          ) {
-            throw new NotFoundException({ url, ...data }, `TikTok: ${String(data["status_msg"] ?? "not found")} (${statusCode})`, Number(data["error_code"]) || undefined);
-          }
-          if (data["status_msg"] === "Music not found" || data["music"] === null) {
-            throw new SoundRemovedException({ url, ...data }, `TikTok: music removed or not found (${statusCode})`, Number(data["error_code"]) || undefined);
-          }
-          this.logger.error(`Got unexpected status code: ${JSON.stringify(data)}`);
-        }
-
-        // ADR-007: validate the response shape at the boundary when a schema
-        // was supplied. A mismatch throws InvalidResponseException (a
-        // TikTokException subclass) so callers catch it uniformly.
-        if (schema) {
-          const parsed = schema.safeParse(data);
-          if (!parsed.success) {
-            throw new InvalidResponseException(
-              { url, data, issues: parsed.error.issues },
-              `TikTok response did not match the expected schema: ${parsed.error.message}`
-            );
-          }
-          return parsed.data;
-        }
-
-        return data;
-      } catch (e) {
-        // Already-classified response failures bubble up immediately — no point
-        // retrying them with a different session.
-        if (
-          e instanceof EmptyResponseException ||
-          e instanceof InvalidJSONException ||
-          e instanceof CaptchaException ||
-          e instanceof NotFoundException ||
-          e instanceof SoundRemovedException
-        ) {
-          throw e;
-        }
-
-        // Unclassified Playwright error — kill this session and try another.
-        this.logger.error(`Playwright error during request: ${e}`);
-        await this._markSessionInvalid(session);
-
-        if (retryCount < retries) {
-          this.logger.info(`Retrying with a new session (${retryCount}/${retries})`);
-          if (exponentialBackoff) {
-            await sleep(2 ** retryCount * 1000);
-          } else {
-            await sleep(1000);
-          }
-          try {
-            [i, session] = await this._getValidSessionIndex({ sessionIndex });
-          } catch (sessionErr) {
-            this.logger.error(`Failed to get valid session: ${sessionErr}`);
-            throw sessionErr;
-          }
-        } else {
-          throw e;
-        }
-      }
-    }
-
-    throw new EmptyResponseException({ url }, "makeRequest: exhausted all retries");
+    return this._dispatcher.makeRequest(options as MakeRequestOptions);
   }
 
   // ── Close / cleanup ──
@@ -841,10 +477,14 @@ export class TikTokApi {
     this.logger.debug(`Closing ${this.sessions.length} sessions...`);
 
     for (const session of this.sessions) {
-      try { await session.page.close(); } catch (e) {
+      try {
+        await session.page.close();
+      } catch (e) {
         this.logger.debug(`Error closing page: ${e}`);
       }
-      try { await session.context.close(); } catch (e) {
+      try {
+        await session.context.close();
+      } catch (e) {
         this.logger.debug(`Error closing context: ${e}`);
       }
     }
@@ -864,7 +504,6 @@ export class TikTokApi {
   }
 
   async stopPlaywright(): Promise<void> {
-    // Python also calls self.playwright.stop() — we store it on this.playwright
     try {
       if (this.browser) {
         await this.browser.close();
@@ -873,17 +512,13 @@ export class TikTokApi {
     } catch (e) {
       this.logger.debug(`Error closing browser: ${e}`);
     }
-    // Python also stops playwright instance (equivalent of playwright.stop())
-    // We don't hold the playwright instance separately, browser.close() covers it.
   }
 
-  async getSessionContent(url: string, kwargs: { sessionIndex?: number } = {}): Promise<string> {
-    let session: TikTokPlaywrightSession;
-    try {
-      [, session] = await this._getValidSessionIndex(kwargs);
-    } catch {
-      [, session] = this._getSession(kwargs);
-    }
+  async getSessionContent(
+    url: string,
+    kwargs: { sessionIndex?: number } = {}
+  ): Promise<string> {
+    const [, session] = await this._getValidSessionIndex(kwargs);
     try {
       return await session.page.content();
     } catch (e) {
@@ -893,38 +528,14 @@ export class TikTokApi {
     }
   }
 
-  // ── Resource stats / health ──
+  // ── Resource stats / health (delegated) ──
 
   getResourceStats(): ResourceStats {
-    const validSessions = this.sessions.filter((s) => s.isValid).length;
-    return {
-      totalSessions: this.sessions.length,
-      validSessions,
-      invalidSessions: this.sessions.length - validSessions,
-      hasBrowser: this.browser != null,
-      hasPlaywright: false,
-      cleanupCalled: this._cleanupCalled,
-      autoCleanupEnabled: this._autoCleanupDeadSessions,
-      recoveryEnabled: this._sessionRecoveryEnabled,
-    };
+    return this._health.getResourceStats();
   }
 
   async healthCheck(): Promise<HealthCheckResult> {
-    const health = this.getResourceStats() as HealthCheckResult;
-    const sessionDetails = await Promise.all(
-      this.sessions.map(async (s, i) => ({
-        index: i,
-        valid: await this._isSessionValid(s),
-        markedValid: s.isValid,
-      }))
-    );
-    health.sessionDetails = sessionDetails;
-    health.healthySessions = sessionDetails.filter((s) => s.valid).length;
-
-    if (health.invalidSessions > 0 && !this._autoCleanupDeadSessions) {
-      health.warning = `${health.invalidSessions} invalid sessions accumulating (auto-cleanup disabled)`;
-    }
-    return health;
+    return this._health.healthCheck();
   }
 
   // ── Context manager (using/Symbol.asyncDispose) ──
