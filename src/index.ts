@@ -34,6 +34,15 @@ export type {
   ITikTokApi,
 } from "./types";
 
+export {
+  NOT_FOUND_STATUS_CODES,
+  NOT_FOUND_STATUS_MESSAGES,
+  SOUND_REMOVED_STATUS_MESSAGES,
+  isCaptchaResponse,
+  isNotFoundResponse,
+  isSoundRemovedResponse,
+} from "./status_codes";
+
 export { stealthAsync, StealthConfig } from "./stealth";
 export type { StealthConfigOptions } from "./stealth";
 

@@ -16,6 +16,11 @@ import {
 } from "../exceptions";
 import { sleep } from "../helpers";
 import { DEFAULT_MAKE_REQUEST_RETRIES } from "../constants";
+import {
+  isCaptchaResponse,
+  isNotFoundResponse,
+  isSoundRemovedResponse,
+} from "../status_codes";
 
 export interface RequestDispatcherHost {
   getLogger(): Logger;
@@ -117,28 +122,21 @@ export class RequestDispatcher {
 
         const statusCode = data["status_code"];
         if (statusCode !== 0 && statusCode !== undefined) {
-          const statusStr = typeof statusCode === "string" ? statusCode.toLowerCase() : "";
-          if (statusStr.includes("captcha") || data["captcha"] != null) {
+          if (isCaptchaResponse(data)) {
             throw new CaptchaException(
               { url, ...data },
               `TikTok served a captcha challenge`,
               Number(data["error_code"]) || undefined
             );
           }
-          if (
-            statusCode === 10201 ||
-            statusCode === 10202 ||
-            statusCode === 2155 ||
-            data["status_msg"] === "Video not found" ||
-            data["status_msg"] === "User not found"
-          ) {
+          if (isNotFoundResponse(data)) {
             throw new NotFoundException(
               { url, ...data },
               `TikTok: ${String(data["status_msg"] ?? "not found")} (${statusCode})`,
               Number(data["error_code"]) || undefined
             );
           }
-          if (data["status_msg"] === "Music not found" || data["music"] === null) {
+          if (isSoundRemovedResponse(data)) {
             throw new SoundRemovedException(
               { url, ...data },
               `TikTok: music removed or not found (${statusCode})`,

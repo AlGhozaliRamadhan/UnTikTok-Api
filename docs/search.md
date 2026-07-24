@@ -49,10 +49,13 @@ async function searchVideos() {
   const api = new TikTokApi();
   await api.createSessions({ numSessions: 1, sleepAfter: 3 });
 
-  for await (const video of api.search.searchType('cats', 'item', 10)) {
-    console.log(`Video ID: ${video.id}`);
-    console.log(`Caption: ${video.description}`);
-    console.log(`Views: ${video.plays}`);
+  for await (const result of api.search.searchType('cats', 'item', 10)) {
+    // searchType returns User | Video depending on objType — narrow for item hits
+    if ('description' in result) {
+      console.log(`Video ID: ${result.id}`);
+      console.log(`Caption: ${result.description}`);
+      console.log(`Views: ${result.plays}`);
+    }
   }
 
   await api.closeSessions();

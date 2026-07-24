@@ -46,6 +46,9 @@ jobs:
     - name: Typecheck
       run: npm run typecheck
 
+    - name: Typecheck docs examples (ADR-012)
+      run: npm run typecheck:docs
+
     - name: Build
       run: npm run build
 

@@ -4,7 +4,7 @@
 // ============================================================
 
 import axios from "axios";
-import type { ITikTokApi } from "../types";
+import type { ITikTokApi, TikTokPlaywrightSession } from "../types";
 import type { User } from "./user";
 import type { Sound } from "./sound";
 import type { Hashtag } from "./hashtag";
@@ -170,18 +170,41 @@ export class Video {
     void kwargs.proxy;
 
     if (!this.url) {
-        throw new InvalidParameterException(
-          null,
-          "To call video.info() you need to set the video's url."
-        );
+      throw new InvalidParameterException(
+        null,
+        "To call video.info() you need to set the video's url."
+      );
     }
 
-    let text: string;
-    let statusCode = 200;
-    let setCookieHeader: string | string[] | undefined = undefined;
+    const { text, statusCode, setCookieHeader } = await this._fetchPageHtml(session);
 
+    const videoInfo = this._parseVideoPayload(text, statusCode);
+    this.asDict = videoInfo;
+    this._extractFromData();
+
+    if (setCookieHeader) {
+      await this._storeSetCookies(setCookieHeader, session);
+    }
+
+    return videoInfo;
+  }
+
+  /**
+   * Pull the video page's HTML. Prefers browser navigation (preserves the
+   * live session's fingerprint); falls back to a direct axios GET if the
+   * page won't render the SIGI/REHYDRATION script tags (rare, but observed
+   * when TikTok bot-walls the navigation).
+   */
+  private async _fetchPageHtml(
+    session: TikTokPlaywrightSession
+  ): Promise<{
+    text: string;
+    statusCode: number;
+    setCookieHeader: string | string[] | undefined;
+  }> {
+    const url = this.url!;
     try {
-      await session.page.goto(this.url, { waitUntil: "domcontentloaded" });
+      await session.page.goto(url, { waitUntil: "domcontentloaded" });
       let found = false;
       const maxAttempts = 15;
       for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -199,19 +222,21 @@ export class Video {
       }
       if (!found) {
         throw new EmptyResponseException(
-          { url: this.url },
+          { url },
           "Script tags (__UNIVERSAL_DATA_FOR_REHYDRATION__ or SIGI_STATE) not found in page DOM after timeout."
         );
       }
-      text = await session.page.content();
+      const text = await session.page.content();
+      return { text, statusCode: 200, setCookieHeader: undefined };
     } catch (fetchErr) {
-      this.parent.logger.warn(`Browser navigation failed for video.info(), falling back to axios: ${fetchErr}`);
-      const response = await axios.get<string>(this.url, {
+      this.parent.logger.warn(
+        `Browser navigation failed for video.info(), falling back to axios: ${fetchErr}`
+      );
+      const response = await axios.get<string>(url, {
         headers: session.headers ?? {},
         responseType: "text",
       });
 
-      statusCode = response.status;
       if (response.status !== 200) {
         throw new InvalidResponseException(
           response.data,
@@ -219,68 +244,126 @@ export class Video {
           response.status
         );
       }
-      text = response.data;
-      setCookieHeader = response.headers["set-cookie"];
+      return {
+        text: response.data,
+        statusCode: response.status,
+        setCookieHeader: response.headers["set-cookie"],
+      };
     }
+  }
 
-    let videoInfo: Record<string, unknown>;
+  /**
+   * Pull the JSON video payload out of a rendered page. Tries SIGI_STATE
+   * first (older layout), then __UNIVERSAL_DATA_FOR_REHYDRATION__ (newer).
+   */
+  private _parseVideoPayload(text: string, statusCode: number): Record<string, unknown> {
+    const sigiParsed = this._parseSigiState(text, statusCode);
+    if (sigiParsed) return sigiParsed;
 
-    // Try SIGI_STATE first (same logic as Python)
+    const rehydParsed = this._parseRehydrationState(text, statusCode);
+    if (rehydParsed) return rehydParsed;
+
+    throw new InvalidResponseException(
+      text,
+      "TikTok returned an invalid response.",
+      statusCode
+    );
+  }
+
+  private _parseSigiState(
+    text: string,
+    statusCode: number
+  ): Record<string, unknown> | null {
     const sigiTag = '<script id="SIGI_STATE" type="application/json">';
     const sigiStart = text.indexOf(sigiTag);
-    if (sigiStart !== -1) {
-      const contentStart = sigiStart + sigiTag.length;
-      const contentEnd = text.indexOf("</script>", contentStart);
-      if (contentEnd === -1) {
-        throw new InvalidResponseException(text, "TikTok returned an invalid response.", statusCode);
-      }
-      const data = JSON.parse(text.slice(contentStart, contentEnd)) as Record<string, Record<string, unknown>>;
-      const itemModule = data["ItemModule"];
-      if (!itemModule) {
-        throw new InvalidResponseException(text, "TikTok returned an invalid response. 'ItemModule' not found in SIGI_STATE.", statusCode);
-      }
-      videoInfo = itemModule[this.id!] as Record<string, unknown>;
-      if (!videoInfo) {
-        throw new InvalidResponseException(text, `TikTok returned an invalid response. Video ID ${this.id} not found in ItemModule.`, statusCode);
-      }
-    } else {
-      // Try __UNIVERSAL_DATA_FOR_REHYDRATION__
-      const rehydTag = '<script id="__UNIVERSAL_DATA_FOR_REHYDRATION__" type="application/json">';
-      const rehydStart = text.indexOf(rehydTag);
-      if (rehydStart === -1) {
-        throw new InvalidResponseException(text, "TikTok returned an invalid response.", statusCode);
-      }
-      const contentStart = rehydStart + rehydTag.length;
-      const contentEnd = text.indexOf("</script>", contentStart);
-      if (contentEnd === -1) {
-        throw new InvalidResponseException(text, "TikTok returned an invalid response.", statusCode);
-      }
+    if (sigiStart === -1) return null;
 
-      const data = JSON.parse(text.slice(contentStart, contentEnd)) as Record<string, unknown>;
-      const defaultScope = (data["__DEFAULT_SCOPE__"] ?? {}) as Record<string, unknown>;
-      const videoDetail = (defaultScope["webapp.video-detail"] ?? {}) as Record<string, unknown>;
-
-      if ((videoDetail["statusCode"] ?? 0) !== 0) {
-        throw new InvalidResponseException(text, "TikTok returned an invalid response structure.", statusCode);
-      }
-
-      videoInfo = ((videoDetail["itemInfo"] as Record<string, unknown>)?.["itemStruct"]) as Record<string, unknown>;
-      if (!videoInfo) {
-        throw new InvalidResponseException(text, "TikTok returned an invalid response structure.", statusCode);
-      }
+    const contentStart = sigiStart + sigiTag.length;
+    const contentEnd = text.indexOf("</script>", contentStart);
+    if (contentEnd === -1) {
+      throw new InvalidResponseException(
+        text,
+        "TikTok returned an invalid response.",
+        statusCode
+      );
     }
-
-    this.asDict = videoInfo;
-    this._extractFromData();
-
-    // Convert Set-Cookie headers to Playwright cookie format and store them
-    // (mirrors Python's `requests_cookie_to_playwright_cookie`)
-    if (setCookieHeader) {
-      const cookies = _parseCookieHeaders(setCookieHeader, this.url);
-      await this.parent.setSessionCookies(session, cookies);
+    const data = JSON.parse(text.slice(contentStart, contentEnd)) as Record<
+      string,
+      Record<string, unknown>
+    >;
+    const itemModule = data["ItemModule"];
+    if (!itemModule) {
+      throw new InvalidResponseException(
+        text,
+        "TikTok returned an invalid response. 'ItemModule' not found in SIGI_STATE.",
+        statusCode
+      );
     }
-
+    const videoInfo = itemModule[this.id!] as Record<string, unknown> | undefined;
+    if (!videoInfo) {
+      throw new InvalidResponseException(
+        text,
+        `TikTok returned an invalid response. Video ID ${this.id} not found in ItemModule.`,
+        statusCode
+      );
+    }
     return videoInfo;
+  }
+
+  private _parseRehydrationState(
+    text: string,
+    statusCode: number
+  ): Record<string, unknown> | null {
+    const rehydTag = '<script id="__UNIVERSAL_DATA_FOR_REHYDRATION__" type="application/json">';
+    const rehydStart = text.indexOf(rehydTag);
+    if (rehydStart === -1) return null;
+
+    const contentStart = rehydStart + rehydTag.length;
+    const contentEnd = text.indexOf("</script>", contentStart);
+    if (contentEnd === -1) {
+      throw new InvalidResponseException(
+        text,
+        "TikTok returned an invalid response.",
+        statusCode
+      );
+    }
+
+    const data = JSON.parse(text.slice(contentStart, contentEnd)) as Record<string, unknown>;
+    const defaultScope = (data["__DEFAULT_SCOPE__"] ?? {}) as Record<string, unknown>;
+    const videoDetail = (defaultScope["webapp.video-detail"] ?? {}) as Record<string, unknown>;
+
+    if ((videoDetail["statusCode"] ?? 0) !== 0) {
+      throw new InvalidResponseException(
+        text,
+        "TikTok returned an invalid response structure.",
+        statusCode
+      );
+    }
+
+    const videoInfo = (videoDetail["itemInfo"] as Record<string, unknown>)?.["itemStruct"] as
+      | Record<string, unknown>
+      | undefined;
+    if (!videoInfo) {
+      throw new InvalidResponseException(
+        text,
+        "TikTok returned an invalid response structure.",
+        statusCode
+      );
+    }
+    return videoInfo;
+  }
+
+  /**
+   * Convert Set-Cookie headers from the axios fallback into Playwright
+   * cookie format and persist them on the live session. Mirrors Python's
+   * `requests_cookie_to_playwright_cookie`.
+   */
+  private async _storeSetCookies(
+    setCookieHeader: string | string[],
+    session: TikTokPlaywrightSession
+  ): Promise<void> {
+    const cookies = _parseCookieHeaders(setCookieHeader, this.url!);
+    await this.parent.setSessionCookies(session, cookies);
   }
 
   /**

@@ -1,6 +1,6 @@
 {
   "name": "untiktok-api",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "Unofficial TikTok API wrapper in TypeScript (ported from Python)",
   "main": "dist/index.js",
   "module": "dist/esm/index.js",
@@ -22,6 +22,7 @@
     "test:run": "vitest run",
     "check:playwright-version": "node scripts/check-playwright-version.mjs",
     "check:npm-version": "node scripts/check-npm-version.mjs",
+    "typecheck:docs": "node scripts/typecheck-docs.mjs",
     "clean": "rimraf dist",
     "prepublishOnly": "npm run clean && npm run build"
   },

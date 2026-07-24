@@ -109,6 +109,14 @@ There are three categories of failure:
 Example retry strategy combining the above:
 
 ```typescript
+import {
+  CaptchaException,
+  EmptyResponseException,
+  NotFoundException,
+  SessionUnavailableException,
+  InvalidParameterException,
+} from 'untiktok-api';
+
 try {
   for await (const video of api.user({ username: 'mrbeast' }).videos(20)) {
     console.log(video.id);

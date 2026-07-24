@@ -21,11 +21,13 @@ Simply passing a URL parameter like `region=JP` to the web API does **not** work
 To see the trending feed (memes, trends) from a specific country, you must pass a proxy server located in that country when fetching the videos:
 
 ```typescript
+import { TikTokApi } from 'untiktok-api';
+
 const api = new TikTokApi();
-await api.createSessions({ 
-  numSessions: 1, 
+await api.createSessions({
+  numSessions: 1,
   // Pass a proxy from the country you want (e.g. Japan)
-  proxy: 'http://user:pass@japan-proxy-ip:port' 
+  proxies: ['http://user:pass@japan-proxy-ip:port'],
 });
 
 for await (const video of api.trending.videos()) {

@@ -11,6 +11,8 @@ Package entry: `import { TikTokApi, ... } from 'untiktok-api'`.
 Main entry point. Optional logger config only — sessions are created separately.
 
 ```typescript
+import { TikTokApi } from 'untiktok-api';
+
 const api = new TikTokApi({
   loggingLevel: 'warn',  // 'debug' | 'info' | 'warn' | 'error'
   loggerName: 'MyApp',   // log prefix when running multiple scrapers
@@ -77,7 +79,8 @@ await api.createSessions({
 
   // Custom page / context factories (advanced launchers)
   pageFactory: async (context) => context.newPage(),
-  browserContextFactory: async () => { /* return BrowserContext */ },
+  // browserContextFactory must return a BrowserContext (or Browser cast).
+  // browserContextFactory: async (pw) => { return await someCustomContext(pw); },
 
   // @deprecated Prefer a single proxy via contextOptions / custom factory.
   // Array of proxy strings or { server, username?, password? } objects.
@@ -123,6 +126,7 @@ All fields are optional. Types live on `CreateSessionsOptions` (exported).
 List endpoints return **async generators**. Use `for await (... of ...)`. Pagination (`cursor` / `hasMore`) is handled inside `paginate()` (ADR-008). Signature pattern for most feeds:
 
 ```ts
+// @docs-skip — signature sketch, not a runnable example
 method(count?: number, cursor?: number, kwargs?: { headers?; sessionIndex? })
 ```
 
@@ -175,6 +179,7 @@ for await (const related of api.video({ id: '...' }).relatedVideos(20)) {}
 ## `User`
 
 ```typescript
+// @docs-skip — options shape sketch, not a runnable example
 const user = api.user({
   username?: string,
   userId?: string,
@@ -197,6 +202,7 @@ const user = api.user({
 ## `Video`
 
 ```typescript
+// @docs-skip — options shape sketch, not a runnable example
 const video = api.video({
   id?: string,
   url?: string,           // preferred for info() / fromUrl
@@ -204,8 +210,10 @@ const video = api.video({
   sessionIndex?: number,
   proxy?: string,
 });
+```
 
-// Prefer this when you only have a share URL (import { Video } from 'untiktok-api'):
+```typescript
+// @docs-skip — this example needs an `api` instance from a previous block.
 const video2 = await Video.fromUrl(api, 'https://www.tiktok.com/@user/video/123', { sessionIndex: 0 });
 ```
 

@@ -13,13 +13,14 @@ import { InvalidParameterException } from "./exceptions";
 export async function extractVideoIdFromUrl(
   url: string,
   headers: Record<string, string> = {},
-  proxy?: string | null
+  // Reserved for future proxy support — axios does not accept a raw proxy
+  // string the same way requests does; the caller would configure an
+  // httpsAgent instead. Prefixed with _ to mark as intentionally unused.
+  _proxy?: string | null
 ): Promise<string> {
   const response = await axios.head(url, {
     headers,
     maxRedirects: 10,
-    // axios does not accept a raw proxy string the same way requests does —
-    // the caller should configure an httpsAgent if a proxy is needed.
   });
 
   // axios stores the final URL in response.request?.res?.responseUrl
