@@ -9,7 +9,7 @@ const msToken = process.env.ms_token ?? undefined;
 const headless = (process.env.headless ?? "true").toLowerCase() === "true";
 const browser = (process.env.TIKTOK_BROWSER as "chromium" | "firefox" | "webkit") ?? "chromium";
 
-describe.skipIf(!process.env.CI_NETWORK)("integration: user info + videos + liked + reposts + pinned + favorited + followers/following", () => {
+describe.skipIf(!process.env.CI_NETWORK || !process.env.ms_token)("integration: user info + videos + liked + reposts + pinned + favorited + followers/following", () => {
   it("extracts user metadata and video feeds", async () => {
     const api = new TikTokApi();
     try {

@@ -9,7 +9,7 @@ const msToken = process.env.ms_token ?? undefined;
 const headless = (process.env.headless ?? "true").toLowerCase() === "true";
 const browser = (process.env.TIKTOK_BROWSER as "chromium" | "firefox" | "webkit") ?? "chromium";
 
-describe.skipIf(!process.env.CI_NETWORK)("integration: video.comments", () => {
+describe.skipIf(!process.env.CI_NETWORK || !process.env.ms_token)("integration: video.comments", () => {
   it("returns at least 1 comment with id and text", async () => {
     const api = new TikTokApi();
     try {

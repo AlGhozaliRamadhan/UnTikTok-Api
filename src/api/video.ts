@@ -333,22 +333,14 @@ export class Video {
     const videoDetail = (defaultScope["webapp.video-detail"] ?? {}) as Record<string, unknown>;
 
     if ((videoDetail["statusCode"] ?? 0) !== 0) {
-      throw new InvalidResponseException(
-        text,
-        "TikTok returned an invalid response structure.",
-        statusCode
-      );
+      return null;
     }
 
     const videoInfo = (videoDetail["itemInfo"] as Record<string, unknown>)?.["itemStruct"] as
       | Record<string, unknown>
       | undefined;
     if (!videoInfo) {
-      throw new InvalidResponseException(
-        text,
-        "TikTok returned an invalid response structure.",
-        statusCode
-      );
+      return null;
     }
     return videoInfo;
   }

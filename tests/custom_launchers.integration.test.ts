@@ -48,7 +48,9 @@ describe.skipIf(!process.env.CI_NETWORK)("integration: custom pageFactory + supp
     }
   });
 
-  it.each(["chromium", "firefox"] as const)("creates 1 session with %s browser", async (browser) => {
+  // CI only installs chromium — skip firefox there, test both locally.
+  const SUPPORTED_BROWSERS = (process.env.CI_NETWORK ? ["chromium"] : ["chromium", "firefox"]) as ("chromium" | "firefox")[];
+  it.each(SUPPORTED_BROWSERS)("creates 1 session with %s browser", async (browser) => {
     const api = new TikTokApi();
     try {
       await api.createSessions({

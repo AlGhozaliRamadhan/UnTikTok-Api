@@ -9,7 +9,7 @@ const msToken = process.env.ms_token ?? undefined;
 const headless = (process.env.headless ?? "true").toLowerCase() === "true";
 const browser = (process.env.TIKTOK_BROWSER as "chromium" | "firefox" | "webkit") ?? "chromium";
 
-describe.skipIf(!process.env.CI_NETWORK)("integration: playlist.info + playlist.videos", () => {
+describe.skipIf(!process.env.CI_NETWORK || !process.env.ms_token)("integration: playlist.info + playlist.videos", () => {
   it("returns info and at least 1 video for a known playlist", async () => {
     const api = new TikTokApi();
     try {

@@ -489,9 +489,25 @@ export class User {
     const keys = Object.keys(data);
 
     if (keys.includes("userInfo")) {
-      const userInfo = (data["userInfo"] as Record<string, Record<string, string>>)["user"];
-      if (userInfo) {
-        this._updateIdSecUidUsername(userInfo["id"], userInfo["secUid"], userInfo["uniqueId"]);
+      const userInfoBlock = data["userInfo"] as Record<string, unknown> | undefined;
+      const userObj = userInfoBlock?.["user"] as Record<string, unknown> | undefined;
+      if (userObj) {
+        const id = userObj["id"] as string | undefined;
+        const secUid = userObj["secUid"] as string | undefined;
+        const uniqueId = userObj["uniqueId"] as string | undefined;
+        if (!id || !secUid || !uniqueId) {
+          this.parent.logger.warn(
+            `user._extractFromData: 'userInfo.user' found but missing id/secUid/uniqueId. ` +
+            `user keys: [${Object.keys(userObj).join(", ")}]. ` +
+            `userInfo keys: [${Object.keys(userInfoBlock!).join(", ")}]`
+          );
+        }
+        this._updateIdSecUidUsername(id, secUid, uniqueId);
+      } else {
+        this.parent.logger.warn(
+          `user._extractFromData: 'userInfo' present but 'user' is null/missing. ` +
+          `userInfo keys: [${Object.keys(userInfoBlock ?? ({} as Record<string, unknown>)).join(", ")}]`
+        );
       }
     } else {
       this._updateIdSecUidUsername(

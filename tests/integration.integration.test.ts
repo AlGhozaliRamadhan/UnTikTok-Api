@@ -9,7 +9,7 @@ const msToken = process.env.ms_token ?? undefined;
 const headless = (process.env.headless ?? "true").toLowerCase() === "true";
 const browser = (process.env.TIKTOK_BROWSER as "chromium" | "firefox" | "webkit") ?? "chromium";
 
-describe.skipIf(!process.env.CI_NETWORK)("integration: trending + user + hashtag flow", () => {
+describe.skipIf(!process.env.CI_NETWORK || !process.env.ms_token)("integration: trending + user + hashtag flow", () => {
   it("runs a full real-world flow", async () => {
     const api = new TikTokApi();
     try {
