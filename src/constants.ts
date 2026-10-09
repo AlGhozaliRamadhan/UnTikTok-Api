@@ -32,3 +32,17 @@ export const DEFAULT_NUM_SESSIONS = 5;
 export const DEFAULT_SLEEP_AFTER = 1;
 export const DEFAULT_TIMEOUT_MS = 30_000;
 export const DEFAULT_MAKE_REQUEST_RETRIES = 3;
+
+// ── Pagination cost bounds (ADR-014) ─────────────────────────────────
+// `paginate()` previously looped `while (found < count)` with a
+// caller-controlled `count` and TikTok-controlled `hasMore`/`cursor` as the
+// only stops, so one call could drive unbounded signed-fetch spend
+// (Paginate-UnboundedCount-v1). These three caps bound it independently of
+// caller input and remote cooperation.
+
+/** Upper bound on items yielded by a single paginate() call. */
+export const MAX_PAGINATE_COUNT = 1000;
+/** Upper bound on TikTok page fetches per paginate() call. */
+export const MAX_PAGINATE_PAGES = 100;
+/** Consecutive non-advancing-cursor pages before paginate() stops. */
+export const MAX_CURSOR_STALLS = 10;

@@ -138,6 +138,17 @@ test-results/
 *.mp3
 state.json
 *state.json
+# Session secrets — Playwright storageState / cookie / session dumps.
+# These carry msToken + cookies and must never be committed
+# (AGENTS.md Security; complements *state.json above).
+*cookies*.json
+*session*.json
+storageState*.json
+*storage-state*.json
+
+# Release distribution assets (npm .tgz + standalone .zip under
+# artifacts/releases/) are attached to GitHub Releases, never committed.
+artifacts/
 
 # Local-only — never committed
 # Architecture decision records are a working scratchpad, not a published asset.

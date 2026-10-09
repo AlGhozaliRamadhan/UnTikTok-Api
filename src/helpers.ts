@@ -3,12 +3,16 @@
 // Mirrors TikTokApi/helpers.py
 // ============================================================
 
-import axios from "axios";
 import { randomInt } from "crypto";
 import { InvalidParameterException } from "./exceptions";
+import { resolveTikTokUrl } from "./request/fetchScope";
 
 /**
  * Extract the video ID from a TikTok URL, following redirects.
+ *
+ * Fetch scope (ADR-014): the URL and every redirect hop must be an https
+ * TikTok host — validated BEFORE any fetch — so session headers never leave
+ * the trust boundary. Throws `InvalidParameterException` otherwise.
  */
 export async function extractVideoIdFromUrl(
   url: string,
@@ -18,17 +22,9 @@ export async function extractVideoIdFromUrl(
   // httpsAgent instead. Prefixed with _ to mark as intentionally unused.
   _proxy?: string | null
 ): Promise<string> {
-  const response = await axios.head(url, {
-    headers,
-    maxRedirects: 10,
-  });
-
-  // axios stores the final URL in response.request?.res?.responseUrl
-  // or we can use response.request.path on some versions.
-  // The safest approach is to use the `responseUrl` from the underlying http request.
-  const finalUrl: string =
-    (response.request as { res?: { responseUrl?: string } })?.res?.responseUrl ??
-    url;
+  // Redirects are followed hop-by-hop with per-hop allowlisting inside;
+  // `headers` only ever egress toward allowlisted TikTok hops.
+  const finalUrl: string = await resolveTikTokUrl(url, { ...headers });
 
   if (finalUrl.includes("@") && finalUrl.includes("/video/")) {
     return finalUrl.split("/video/")[1]!.split("?")[0]!;
