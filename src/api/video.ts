@@ -16,6 +16,12 @@ import {
 } from "../exceptions";
 import { itemListResponseSchema, commentListResponseSchema } from "../schemas";
 import { paginate } from "./_paginate";
+import {
+  assertTrustedTikTokUrl,
+  headersForMediaFetch,
+  isTrustedTikTokUrl,
+  resolveTikTokUrl,
+} from "../request/fetchScope";
 
 export interface VideoOptions {
   id?: string | null | undefined;
@@ -87,6 +93,13 @@ export class Video {
     this.id = id ?? undefined;
     this.url = url ?? undefined;
 
+    if (url) {
+      // Fail closed before any fetch: only TikTok hosts may become a
+      // server-side fetch target (ADR-014). The public `url` field stays
+      // mutable, so every fetch site re-validates independently.
+      assertTrustedTikTokUrl(url, "Video url");
+    }
+
     if (data) {
       this.asDict = data;
       this._extractFromData();
@@ -130,12 +143,7 @@ export class Video {
     // proxy reserved for future HEAD-via-proxy; prefer session headers today
     void kwargs.proxy;
 
-    const response = await axios.head(url, {
-      headers: session.headers ?? {},
-      maxRedirects: 10,
-    });
-    const finalUrl: string =
-      (response.request as { res?: { responseUrl?: string } })?.res?.responseUrl ?? url;
+    const finalUrl: string = await resolveTikTokUrl(url, { ...(session.headers ?? {}) });
 
     if (finalUrl.includes("@") && finalUrl.includes("/video/")) {
       const videoId = finalUrl.split("/video/")[1]!.split("?")[0];
@@ -203,6 +211,10 @@ export class Video {
     setCookieHeader: string | string[] | undefined;
   }> {
     const url = this.url!;
+    // Re-validated here (not just in the ctor) because `url` is a public
+    // mutable field: navigating the authenticated context or attaching
+    // session headers to a non-TikTok host must never happen (ADR-014).
+    assertTrustedTikTokUrl(url, "Video url");
     try {
       await session.page.goto(url, { waitUntil: "domcontentloaded" });
       let found = false;
@@ -354,6 +366,11 @@ export class Video {
     setCookieHeader: string | string[],
     session: TikTokPlaywrightSession
   ): Promise<void> {
+    // Defense in depth: only the allowlisted info() chain may plant cookies
+    // into the live session jar. With the fetch gates above this is always
+    // true; the guard keeps a future caller from reintroducing jar pollution
+    // (VideoInfo-NavFallback-CookieStore-v1).
+    if (!isTrustedTikTokUrl(this.url!)) return;
     const cookies = _parseCookieHeaders(setCookieHeader, this.url!);
     await this.parent.setSessionCookies(session, cookies);
   }
@@ -393,14 +410,22 @@ export class Video {
       .map(([k, v]) => `${k}=${v}`)
       .join("; ");
 
-    // Python mutates session.headers — we create a shallow copy here
-    const headers: Record<string, string> = {
-      ...(session.headers ?? {}),
-      range: "bytes=0-",
-      "accept-encoding": "identity;q=1, *;q=0",
-      referer: "https://www.tiktok.com/",
-      cookie: cookieString,
-    };
+    // Python mutates session.headers — we create a shallow copy here.
+    // Credential scope (ADR-014): TikTok media hosts get the full
+    // credentialed set; any other downloadAddr host fetches WITHOUT the
+    // session cookie or session headers, so a malicious/compromised
+    // downloadAddr cannot exfiltrate the session
+    // (VideoBytes-DownloadAddr-CookieForward-v1).
+    const { headers, stripped } = headersForMediaFetch(
+      downloadAddr,
+      { ...(session.headers ?? {}) },
+      cookieString
+    );
+    if (stripped) {
+      this.parent.logger.debug(
+        `Video.bytes: untrusted media host, fetching without session credentials`
+      );
+    }
 
     if (options.stream) {
       async function* streamGen(): AsyncGenerator<Buffer> {
