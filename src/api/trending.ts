@@ -1,8 +1,3 @@
-// ============================================================
-// api/trending.ts
-// Mirrors TikTokApi/api/trending.py
-// ============================================================
-
 import type { ITikTokApi } from "../types";
 import type { Video } from "./video";
 import { trendingFeedResponseSchema } from "../schemas";

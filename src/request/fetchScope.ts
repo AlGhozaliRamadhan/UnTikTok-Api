@@ -1,28 +1,3 @@
-// ============================================================
-// request/fetchScope.ts — server-side fetch scope gates (ADR-014)
-//
-// The library performs server-side fetches (axios HEAD/GET, page.goto) and
-// attaches live session headers/cookies to them. Nothing validated the fetch
-// target before this module: a caller-supplied video URL flowed straight into
-// `axios.head(url, { headers: session.headers })` with the host/shape check
-// running only on the post-fetch URL, and a TikTok-supplied `downloadAddr`
-// flowed into `axios.get` with the full cookie jar attached
-// (VideoFromUrl-SSRF-HeaderForward-v1,
-// VideoBytes-DownloadAddr-CookieForward-v1,
-// VideoInfo-NavFallback-CookieStore-v1).
-//
-// Rules enforced here:
-//   - Page fetches (video pages, short-link resolution): the URL — and every
-//     redirect hop — must be https on an allowlisted TikTok host. Anything
-//     else throws `InvalidParameterException` BEFORE any fetch or header
-//     egress. Redirects are followed manually (fetch redirect:"manual") so a
-//     hop off the allowlist fails closed instead of carrying credentials.
-//   - Media fetches (downloadAddr/playAddr): TikTok CDN hosts change over
-//     time, so an unknown host does NOT fail the download — it fetches
-//     WITHOUT session credentials (cookie + session headers stripped).
-//     Secrets stay in scope; availability degrades gracefully.
-// ============================================================
-
 import { InvalidParameterException } from "../exceptions";
 
 /** Hosts (and their subdomains) allowed to receive credentialed page fetches. */

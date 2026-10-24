@@ -1,7 +1,3 @@
-// ============================================================
-// logger.ts — simple console logger used by TikTokApi
-// ============================================================
-
 export type LogLevel = "debug" | "info" | "warn" | "error";
 
 export class Logger {

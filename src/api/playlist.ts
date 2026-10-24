@@ -1,8 +1,3 @@
-// ============================================================
-// api/playlist.ts
-// Mirrors TikTokApi/api/playlist.py
-// ============================================================
-
 import type { ITikTokApi } from "../types";
 import type { Video } from "./video";
 import type { User } from "./user";

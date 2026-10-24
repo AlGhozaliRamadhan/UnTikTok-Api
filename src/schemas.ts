@@ -1,6 +1,3 @@
-// ============================================================
-// schemas.ts — Runtime validation boundary for TikTok responses (ADR-007)
-// ============================================================
 //
 // `makeRequest` returns `Record<string, unknown>` today; every consumer
 // immediately `as`-casts the response. These zod schemas validate the

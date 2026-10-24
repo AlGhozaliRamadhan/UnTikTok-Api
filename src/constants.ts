@@ -1,7 +1,3 @@
-// ============================================================
-// constants.ts — magic numbers / recovery URLs (ADR-009)
-// ============================================================
-
 /** Random history_len for session fingerprint params (inclusive range). */
 export const SESSION_HISTORY_LEN = { min: 1, max: 10 } as const;
 

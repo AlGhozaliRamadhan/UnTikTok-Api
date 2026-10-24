@@ -1,8 +1,3 @@
-// ============================================================
-// exceptions.ts
-// Three failure categories, three subclasses — ADR-010.
-// ============================================================
-
 /**
  * Base class for every error this library raises intentionally.
  * Callers can `catch (e) { if (e instanceof TikTokException) {...} }`

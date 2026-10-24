@@ -1,14 +1,7 @@
 #!/usr/bin/env node
-// ============================================================
-// typecheck-docs.mjs — extract fenced TS/JS code blocks from docs/*.md
-// and run them through `tsc --noEmit` (ADR-012 follow-up).
-//
-// Skip: first non-empty line is `// @docs-skip` (signatures / pseudo-code).
-// ============================================================
 
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -184,7 +177,11 @@ function main() {
     .filter((f) => f.endsWith(".md"))
     .map((f) => join(docsDir, f));
 
-  const tmp = mkdtempSync(join(tmpdir(), "untiktok-docs-"));
+  // Keep the scratch project inside the repo: a cross-drive relative import
+  // (temp on C:, repo on D:) cannot be expressed as `../src/index`.
+  const cacheDir = join(repoRoot, ".cache");
+  mkdirSync(cacheDir, { recursive: true });
+  const tmp = mkdtempSync(join(cacheDir, "typecheck-docs-"));
   const extracted = [];
   try {
     for (const file of docs) {

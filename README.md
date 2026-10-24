@@ -6,7 +6,7 @@
 
 [![NPM Version](https://img.shields.io/npm/v/untiktok-api?color=red)](https://www.npmjs.com/package/untiktok-api)
 [![TypeScript](https://img.shields.io/badge/TypeScript-6.x-blue?logo=typescript)](https://www.typescriptlang.org/)
-[![Playwright](https://img.shields.io/badge/Playwright-1.61-green?logo=playwright)](https://playwright.dev/)
+[![Playwright](https://img.shields.io/badge/Playwright-1.63-green?logo=playwright)](https://playwright.dev/)
 [![Node.js](https://img.shields.io/badge/Node.js-20.10+-brightgreen?logo=node.js)](https://nodejs.org/)
 
 ---
@@ -18,7 +18,6 @@
 - [Quick Start](#quick-start)
 - [API Reference](#api-reference)
 - [Examples](#examples)
-- [Common Issues](#common-issues)
 
 ---
 

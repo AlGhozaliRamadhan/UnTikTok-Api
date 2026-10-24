@@ -1,18 +1,3 @@
-// ============================================================
-// status_codes.ts — TikTok `status_code` / `status_msg` dispatch map
-// (ADR-010 follow-up)
-//
-// makeRequest previously inlined placeholder codes (10201/10202/5) and
-// ad-hoc `status_msg` string matches. This module canonizes the dispatch as
-// data, so new endpoint-specific codes are a one-line entry instead of a
-// new branch in RequestDispatcher.
-//
-// The shape is deliberately simple: each detector describes one failure mode
-// (`captcha`, `notFound`, `soundRemoved`). RequestDispatcher walks the
-// categories in order and throws the matching exception subclass on the
-// first hit. Unknown shapes still log-and-return-data as before.
-// ============================================================
-
 /**
  * Numeric `status_code` values TikTok returns when the requested resource
  * does not exist (video / user / music). Captured from live traffic and the

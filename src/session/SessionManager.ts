@@ -1,7 +1,3 @@
-// ============================================================
-// session/SessionManager.ts — validation, recovery, cookies (ADR-009)
-// ============================================================
-
 import { randomInt } from "crypto";
 import type { Logger } from "../logger";
 import type { TikTokPlaywrightSession } from "../types";

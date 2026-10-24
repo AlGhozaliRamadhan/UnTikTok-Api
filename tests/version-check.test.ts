@@ -1,4 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { PACKAGE_VERSION } from "../src/version";
 import {
   compareVersions,
   fetchLatestNpmVersion,
@@ -149,6 +152,15 @@ describe("checkForUpdate", () => {
     const info = await checkForUpdate("1.0.0", { timeoutMs: 200 });
     expect(info).toBeNull();
     expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+});
+
+describe("package version", () => {
+  it("src/version.ts matches package.json", () => {
+    const pkg = JSON.parse(
+      readFileSync(resolve(process.cwd(), "package.json"), "utf8")
+    ) as { version: string };
+    expect(PACKAGE_VERSION).toBe(pkg.version);
   });
 });
 

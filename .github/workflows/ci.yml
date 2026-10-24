@@ -49,8 +49,14 @@ jobs:
     - name: Typecheck docs examples (ADR-012)
       run: npm run typecheck:docs
 
+    - name: Check version constant (ADR-013)
+      run: npm run sync-version -- --check
+
     - name: Build
       run: npm run build
+
+    - name: Check ESM entry point
+      run: npm run check:esm
 
     - name: Unit tests
       run: npm run test:run
