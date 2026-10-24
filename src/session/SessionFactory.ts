@@ -1,12 +1,3 @@
-// ============================================================
-// session/SessionFactory.ts — createSessions lifecycle (ADR-9 follow-up)
-//
-// Moves the browser-launch + per-session-context/page bootstrap out of
-// tiktok.ts. TikTokApi still owns the public `createSessions()` entry point
-// and the session array, but all of the "how do I bring up a Playwright
-// browser and one session inside it" logic lives here.
-// ============================================================
-
 import { randomInt } from "crypto";
 import { URL } from "url";
 import type { Browser, BrowserContext, Page } from "playwright";
@@ -16,7 +7,7 @@ import type {
   ProxySettings,
   TikTokPlaywrightSession,
 } from "../types";
-import { InvalidParameterException } from "../exceptions";
+import { InvalidParameterException, SessionUnavailableException } from "../exceptions";
 import { randomChoice, sleep } from "../helpers";
 import { stealthAsync } from "../stealth";
 import {
@@ -128,7 +119,7 @@ export class SessionFactory {
           .filter((r): r is PromiseRejectedResult => r.status === "rejected")
           .slice(0, 3)
           .map((r) => String(r.reason));
-        throw new InvalidParameterException(
+        throw new SessionUnavailableException(
           null,
           `Failed to create minimum required sessions. Created ${succeeded}/${numSessions}, needed ${minRequired}.\n` +
             `Errors: ${errors.join("; ")}`
@@ -253,7 +244,7 @@ export class SessionFactory {
       if (pwProxyOpt) ctxOpts.proxy = pwProxyOpt;
       const browser = this.host.getBrowser();
       if (!browser) {
-        throw new InvalidParameterException(null, "Browser is not initialized.");
+        throw new SessionUnavailableException(null, "Browser is not initialized.");
       }
       context = await browser.newContext(
         ctxOpts as Parameters<Browser["newContext"]>[0]

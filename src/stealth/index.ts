@@ -1,11 +1,3 @@
-// ============================================================
-// stealth/index.ts
-// Mirrors TikTokApi/stealth/stealth.py + all JS scripts
-//
-// Injects anti-bot JavaScript into Playwright pages to make
-// headless Chromium look like a real browser.
-// ============================================================
-
 import type { Page } from "playwright";
 
 import { chrome_app } from './js/chrome_app';
@@ -147,6 +139,7 @@ export class StealthConfig {
     if (this.chromeRuntime) yield chrome_runtime_script;
     if (this.iframeContentWindow) yield iframe_contentWindow;
     if (this.mediaCodecs) yield media_codecs;
+    if (this.navigatorHardwareConcurrency) yield navigator_hardwareConcurrency;
     if (this.navigatorLanguages) yield navigator_languages;
     if (this.navigatorPermissions) yield navigator_permissions;
     if (this.navigatorPlatform) yield navigator_platform;

@@ -1,17 +1,3 @@
-// ============================================================
-// api/_paginate.ts
-// Shared pagination engine — ADR-008.
-//
-// Every paginated endpoint (user.videos, user.liked, sound.videos, ...) used
-// to hand-roll the same ~14-line "fetch a page, yield items, check hasMore,
-// advance cursor" loop, 10+ times over. The `hasMore`/`has_more` casing drift
-// itself was already fixed at the schema boundary (ADR-007's
-// `normalizeHasMore` in schemas.ts, which every list schema runs through) —
-// this helper's job is to stop copy-pasting the loop around that normalized
-// shape, and to give every paginated method the same
-// `(count?, cursor?, kwargs?)` signature.
-// ============================================================
-
 import type { z } from "zod";
 import type { ITikTokApi } from "../types";
 import { InvalidResponseException } from "../exceptions";
@@ -108,7 +94,7 @@ export async function* paginate<S extends z.ZodType, TItem, TOut>(
     for (const item of items) {
       yield build(item);
       found++;
-      if (found >= count) return;
+      if (found >= effectiveCount) return;
     }
 
     if (!getHasMore(resp)) return;

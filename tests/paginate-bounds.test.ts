@@ -54,6 +54,25 @@ describe("paginate() cost bounds (ADR-014)", () => {
     expect(parent.logger.warn).toHaveBeenCalledWith(expect.stringMatching(/clamped/));
   });
 
+  it("stops at the clamp even when a single page is oversized", async () => {
+    // A page larger than the remaining budget must not overshoot the clamp.
+    const makeRequest = vi.fn().mockResolvedValue({
+      itemList: Array.from(
+        { length: MAX_PAGINATE_COUNT + 500 },
+        (_, i) => `i${i}`
+      ),
+      hasMore: true,
+      cursor: 1,
+    });
+    const parent = fakeParent(makeRequest);
+
+    const items = await drain(runPaginate(parent, 1_000_000_000));
+
+    expect(items).toHaveLength(MAX_PAGINATE_COUNT);
+    expect(makeRequest).toHaveBeenCalledTimes(1);
+    expect(parent.logger.warn).toHaveBeenCalledWith(expect.stringMatching(/clamped/));
+  });
+
   it("caps total pages even when items-per-page is tiny", async () => {
     const makeRequest = vi.fn().mockImplementation(() => {
       const n = makeRequest.mock.calls.length;
