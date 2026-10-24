@@ -159,3 +159,4 @@ CLAUDE.md
 .claude/
 .codex/
 .agents/
+skills-lock.json
