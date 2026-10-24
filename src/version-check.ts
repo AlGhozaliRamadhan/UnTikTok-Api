@@ -1,25 +1,4 @@
-// ============================================================
-// version-check.ts
-//
-// Compares the package version in package.json against the latest
-// published version on the npm registry. Used by:
-//   - index.ts: one-shot warn-on-import (env-gated, non-blocking)
-//   - scripts/check-npm-version.mjs: developer / CI guard
-//
-// Design notes:
-//   - Pure module aside from a single `fetch` call. No side effects
-//     on import; the caller decides whether to await.
-//   - All network calls have a short, configurable timeout and a
-//     turnkey opt-out (UNTIKTOK_SKIP_VERSION_CHECK / analogues) so
-//     offline users, CI runners, and tests are never blocked.
-//   - Semver comparison is done via coercion (`a.b.c` -> tuple)
-//     rather than pulling in a semver dep; the npm tag is the
-//     single source of truth.
-//   - Version is read directly from package.json (resolveJsonModule),
-//     which works identically in both CJS and ESM dual-emit.
-// ============================================================
-
-import pkgData from "../package.json";
+import { PACKAGE_VERSION } from "./version";
 
 const NPM_REGISTRY = "https://registry.npmjs.org";
 const NPM_PACKAGE = "untiktok-api";
@@ -52,12 +31,12 @@ export interface VersionCheckOptions {
 }
 
 /**
- * Resolve the package version from package.json at build time.
- * Both CJS and ESM dual-emit passes handle JSON imports via the
- * `resolveJsonModule` flag in tsconfig.json.
+ * Resolve the package version. The value lives in `src/version.ts` so the
+ * same source compiles to both CJS and ESM; tests keep it in sync with
+ * package.json.
  */
 export function getCurrentVersion(): string {
-  return pkgData.version ?? "0.0.0";
+  return PACKAGE_VERSION || "0.0.0";
 }
 
 /**
