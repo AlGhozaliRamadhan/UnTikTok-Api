@@ -1,7 +1,3 @@
-// ============================================================
-// request/Signer.ts — JS fetch + X-Bogus signing (ADR-009)
-// ============================================================
-
 import { randomInt } from "crypto";
 import type { Logger } from "../logger";
 import type { TikTokPlaywrightSession } from "../types";

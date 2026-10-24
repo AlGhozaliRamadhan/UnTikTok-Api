@@ -1,8 +1,3 @@
-// ============================================================
-// types.ts
-// Shared TypeScript interfaces and types
-// ============================================================
-
 import type { BrowserContext, Page } from "playwright";
 import type { z } from "zod";
 import type { Logger } from "./logger";

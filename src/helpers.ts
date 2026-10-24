@@ -1,8 +1,3 @@
-// ============================================================
-// helpers.ts
-// Mirrors TikTokApi/helpers.py
-// ============================================================
-
 import { randomInt } from "crypto";
 import { InvalidParameterException } from "./exceptions";
 import { resolveTikTokUrl } from "./request/fetchScope";

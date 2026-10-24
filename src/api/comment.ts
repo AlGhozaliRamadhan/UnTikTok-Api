@@ -1,8 +1,3 @@
-// ============================================================
-// api/comment.ts
-// Mirrors TikTokApi/api/comment.py
-// ============================================================
-
 import type { ITikTokApi } from "../types";
 import type { User } from "./user";
 import { commentListResponseSchema } from "../schemas";

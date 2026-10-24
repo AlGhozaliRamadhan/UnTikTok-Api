@@ -1,8 +1,3 @@
-// ============================================================
-// api/video.ts
-// Mirrors TikTokApi/api/video.py — corrected vs Python source
-// ============================================================
-
 import axios from "axios";
 import type { ITikTokApi, TikTokPlaywrightSession } from "../types";
 import type { User } from "./user";

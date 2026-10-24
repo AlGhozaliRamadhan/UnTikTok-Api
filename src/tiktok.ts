@@ -1,10 +1,3 @@
-// ============================================================
-// tiktok.ts
-// TikTokApi — thin composer + public API surface (ADR-009)
-// Session validation, signing, dispatch, health, and session-creation
-// lifecycle live in session/, request/, health/ modules.
-// ============================================================
-
 import type { Browser } from "playwright";
 import type { z } from "zod";
 

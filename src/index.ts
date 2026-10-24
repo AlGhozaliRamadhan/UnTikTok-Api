@@ -1,7 +1,3 @@
-// ============================================================
-// index.ts — Public API surface
-// ============================================================
-
 export { TikTokApi } from "./tiktok";
 export { User } from "./api/user";
 export { Video } from "./api/video";

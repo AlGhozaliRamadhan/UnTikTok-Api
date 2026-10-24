@@ -1,7 +1,3 @@
-// ============================================================
-// health/HealthMonitor.ts — resource stats + healthCheck (ADR-009)
-// ============================================================
-
 import type { Browser } from "playwright";
 import type { HealthCheckResult, ResourceStats, TikTokPlaywrightSession } from "../types";
 

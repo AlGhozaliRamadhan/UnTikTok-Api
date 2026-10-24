@@ -1,8 +1,3 @@
-// ============================================================
-// api/hashtag.ts
-// Mirrors TikTokApi/api/hashtag.py
-// ============================================================
-
 import type { ITikTokApi } from "../types";
 import type { Video } from "./video";
 import { InvalidResponseException, InvalidParameterException } from "../exceptions";

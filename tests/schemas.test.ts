@@ -12,11 +12,6 @@ import {
   userPlaylistResponseSchema,
 } from "../src/schemas";
 
-// ============================================================
-// ADR-007 boundary schemas — shape validation + hasMore/has_more
-// normalization. No live network; fixtures are hand-shaped.
-// ============================================================
-
 describe("itemListResponseSchema (ADR-007)", () => {
   it("normalizes camelCase hasMore and keeps itemList/cursor", () => {
     const out = itemListResponseSchema.parse({

@@ -1,7 +1,3 @@
-// ============================================================
-// request/RequestDispatcher.ts — makeRequest + retry (ADR-009)
-// ============================================================
-
 import { URLSearchParams } from "url";
 import type { z } from "zod";
 import type { Logger } from "../logger";
